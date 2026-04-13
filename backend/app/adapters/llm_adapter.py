@@ -1,0 +1,176 @@
+"""
+Raktio — LLM Adapter
+Provider-agnostic interface for all LLM calls in the platform.
+
+MODEL ROUTING POLICY
+====================
+PLANNING route  → Claude Sonnet (Anthropic)
+    - brief understanding
+    - ontology / entity / topic extraction
+    - simulation planning & config generation
+    - audience, geography, platform recommendations
+
+RUNTIME route   → DeepSeek
+    - agent inference during OASIS simulation
+    - repeated high-volume action decisions
+    - cost-efficient live simulation behavior
+
+REPORT route    → Claude Sonnet (Anthropic)
+    - final premium report generation
+    - deeper reasoning over simulation evidence
+    - insight synthesis and recommendation writing
+
+Usage:
+    from app.adapters.llm_adapter import llm_adapter, ModelRoute
+    response = await llm_adapter.complete(
+        route=ModelRoute.PLANNING,
+        messages=[{"role": "user", "content": "..."}],
+        system="...",
+    )
+"""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any, AsyncIterator
+
+from app.config import ModelRoute, settings
+
+
+class LLMResponse:
+    def __init__(self, content: str, model: str, usage: dict):
+        self.content = content
+        self.model = model
+        self.usage = usage
+
+
+class LLMAdapter:
+    """
+    Provider-agnostic LLM adapter.
+
+    Internally routes to:
+    - Anthropic SDK  → for PLANNING and REPORT routes (Claude Sonnet)
+    - DeepSeek API   → for RUNTIME route (via OpenAI-compatible client)
+
+    All routing decisions are driven by ModelRoute enum + settings.
+    Admin panel can override model IDs at runtime via settings.
+    """
+
+    def _get_model_id(self, route: ModelRoute) -> str:
+        mapping = {
+            ModelRoute.PLANNING: settings.model_planning,
+            ModelRoute.RUNTIME:  settings.model_runtime,
+            ModelRoute.REPORT:   settings.model_report,
+        }
+        return mapping[route]
+
+    def _is_anthropic_route(self, route: ModelRoute) -> bool:
+        return route in (ModelRoute.PLANNING, ModelRoute.REPORT)
+
+    async def complete(
+        self,
+        route: ModelRoute,
+        messages: list[dict[str, str]],
+        system: str = "",
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        stream: bool = False,
+        **kwargs: Any,
+    ) -> LLMResponse:
+        """
+        Send a completion request to the appropriate provider.
+
+        Args:
+            route:      ModelRoute.PLANNING | RUNTIME | REPORT
+            messages:   List of {role, content} dicts
+            system:     System prompt (ignored if provider doesn't support it as separate field)
+            max_tokens: Maximum output tokens
+            temperature: Sampling temperature
+            stream:     Whether to stream (returns AsyncIterator if True)
+        """
+        model_id = self._get_model_id(route)
+
+        if self._is_anthropic_route(route):
+            return await self._call_anthropic(
+                model_id=model_id,
+                system=system,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                **kwargs,
+            )
+        else:
+            return await self._call_deepseek(
+                model_id=model_id,
+                system=system,
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                **kwargs,
+            )
+
+    async def stream_complete(
+        self,
+        route: ModelRoute,
+        messages: list[dict[str, str]],
+        system: str = "",
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        """
+        Streaming completion — used for progressive report generation.
+        Yields text chunks as they arrive.
+        """
+        # TODO: implement streaming for both Anthropic and DeepSeek
+        raise NotImplementedError("Streaming not yet implemented")
+
+    # ------------------------------------------------------------------
+    # Private: Anthropic (Claude Sonnet) — PLANNING and REPORT routes
+    # ------------------------------------------------------------------
+
+    async def _call_anthropic(
+        self,
+        model_id: str,
+        system: str,
+        messages: list[dict],
+        max_tokens: int,
+        temperature: float,
+        **kwargs,
+    ) -> LLMResponse:
+        """
+        Call Anthropic API using the official anthropic Python SDK.
+        Uses prompt caching where beneficial (planning, report phases).
+        TODO: implement with anthropic SDK + prompt caching headers.
+        """
+        # import anthropic
+        # client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+        # response = await client.messages.create(...)
+        raise NotImplementedError("Anthropic integration pending")
+
+    # ------------------------------------------------------------------
+    # Private: DeepSeek — RUNTIME route
+    # ------------------------------------------------------------------
+
+    async def _call_deepseek(
+        self,
+        model_id: str,
+        system: str,
+        messages: list[dict],
+        max_tokens: int,
+        temperature: float,
+        **kwargs,
+    ) -> LLMResponse:
+        """
+        Call DeepSeek API (OpenAI-compatible endpoint).
+        Used exclusively for high-volume agent inference during OASIS runtime.
+        TODO: implement via openai-compatible client pointed at DeepSeek base URL.
+        """
+        # from openai import AsyncOpenAI
+        # client = AsyncOpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
+        # response = await client.chat.completions.create(...)
+        raise NotImplementedError("DeepSeek integration pending")
+
+
+# Singleton instance used across all services
+llm_adapter = LLMAdapter()

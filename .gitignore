@@ -1,0 +1,32 @@
+# === Dependencies ===
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# === Environment ===
+.env
+.env.local
+.env.*.local
+
+# === Next.js ===
+frontend/.next/
+frontend/out/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === IDE ===
+.vscode/
+.idea/
+
+# === External repos (reference only, not part of Raktio) ===
+oasis-main/
+MiroFish-main/
+
+# === Runtime / temp ===
+/tmp/raktio-runs/
+*.sqlite
+*.db
