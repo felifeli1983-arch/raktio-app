@@ -629,13 +629,25 @@ They should not read raw runtime internals directly unless through safe, normali
 
 ## Implementation Status (as of 2026-04-14)
 
-### Status: NOT STARTED
+### Status: IMPLEMENTED (Step 9)
 
-- `api/admin.py` is a stub
-- `admin_service.py` is a stub
-- `admin/oversight.py` and `admin/audits.py` are stubs
-- No `audit_logs` or `runtime_failure_records` tables
-- `require_admin()` in `guards.py` delegates to `require_user()` (no platform_admin role check)
-- Frontend admin pages (11 files) are placeholder stubs
+#### Admin API endpoints (8)
+- GET /admin/overview — platform dashboard (sims, population, credits, LLM costs, failures)
+- GET /admin/tenants — list orgs with plan info
+- GET /admin/tenants/{id} — org detail with plan join
+- GET /admin/simulations — cross-workspace sim list with status filter
+- GET /admin/runtime — active runs, recent completions, failures
+- GET /admin/costs — LLM cost summary by route/provider
+- GET /admin/population — agent pool stats with country distribution
+- GET /admin/audit — audit log entries with filters
 
-### Planned for Step 9
+#### Auth
+- `require_admin()` checks `workspace_memberships` for `role=platform_admin`
+- Non-admins get 403
+
+#### Tables
+- `audit_logs` live (migration 007, 20 tables total)
+- `runtime_failure_records` not created — failure data from simulation_runs
+
+#### Frontend
+- 11 admin pages remain placeholder stubs (Step 11)

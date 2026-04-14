@@ -377,37 +377,30 @@
 
 ## Admin / Governance
 
-### ADM-01: Admin panel API
+### ADM-01: Admin panel API ✅ DONE
 - **Area**: Admin
-- **Description**: `api/admin.py`, `services/admin_service.py`, `admin/oversight.py`, `admin/audits.py` are all stubs. No tenant management, runtime oversight, pricing controls, or failure inspection.
-- **Why deferred**: Step 9.
-- **Dependencies**: None
-- **Priority**: MEDIUM
-- **Type**: Missing feature
-- **Related files**: All admin stubs, `ADMIN_PANEL_SPEC.md`
-- **Recommended step**: Step 9
-- **Status**: DEFERRED
+- **Description**: 8 admin endpoints implemented: overview, tenants (list+detail), simulations, runtime, costs, population, audit logs. Admin service + repository fully implemented.
+- **Status**: DONE (Step 9)
 
-### ADM-02: Audit logs table
+### ADM-02: Audit logs table ✅ DONE
 - **Area**: Admin
-- **Description**: `audit_logs` and `runtime_failure_records` tables from DATA_MODEL_AND_STORAGE.md Domain 8 not created. Sensitive actions are not tracked.
-- **Why deferred**: Step 9.
-- **Dependencies**: None
-- **Priority**: MEDIUM
-- **Type**: Missing feature
-- **Related files**: `DATA_MODEL_AND_STORAGE.md` Domain 8, `TEAM_GOVERNANCE_AND_PERMISSIONS.md`
-- **Recommended step**: Step 9
-- **Status**: DEFERRED
+- **Description**: `audit_logs` table live (migration 007, 20 tables total). RLS restricts to platform_admin. `runtime_failure_records` remains deferred — failures are visible via `admin/runtime` endpoint which reads `simulation_runs.failure_reason`.
+- **Status**: DONE (Step 9). Note: `runtime_failure_records` separate table not created — failure data comes from simulation_runs.
 
-### ADM-03: require_admin() real DB check
+### ADM-03: require_admin() real DB check ✅ DONE
 - **Area**: Governance
-- **Description**: `require_admin()` in `guards.py` delegates to `require_user()`. No `platform_admin` role check from DB. Any authenticated user passes the admin guard.
-- **Why deferred**: Admin panel not started.
+- **Description**: `require_admin()` now checks `workspace_memberships` for `role='platform_admin'`. Non-admins get 403. Tested.
+- **Status**: DONE (Step 9)
+
+### ADM-03b: runtime_failure_records separate table
+- **Area**: Admin
+- **Description**: DATA_MODEL_AND_STORAGE.md section 45 specifies a `runtime_failure_records` table for persistent failure registry. Currently failures are stored in `simulation_runs.failure_reason`. A separate table would support richer failure metadata, categorization, and admin-specific queries.
+- **Why deferred**: Current approach works — failures are visible via `/admin/runtime` which reads `simulation_runs`. Separate table is a refinement.
 - **Dependencies**: None
-- **Priority**: MEDIUM
-- **Type**: Limitation
-- **Related files**: `auth/guards.py`
-- **Recommended step**: Step 9
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Related files**: `repositories/admin.py`, `DATA_MODEL_AND_STORAGE.md`
+- **Recommended step**: Admin refinement pass
 - **Status**: DEFERRED
 
 ### ADM-04: Team management API

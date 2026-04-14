@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 8E — log_context propagation (Step 8 COMPLETE)**
+> Last completed step: **Step 9 — Admin Panel API**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -44,7 +44,7 @@
 | 8A-C | Billing / Credits (formula, service, API) | **PASS** |
 | 8D | Cost & Token Intelligence Layer | **PASS** |
 | 8E | log_context propagation across services | **PASS** |
-| 9 | Admin Panel API | NOT STARTED |
+| 9 | Admin Panel API | **PASS** |
 | 10 | Team & Governance API | NOT STARTED |
 | 11 | Frontend Pages | NOT STARTED |
 | 12 | Integration Testing | NOT STARTED |
@@ -227,8 +227,7 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 | No Agent Atlas API (`api/agents.py` stub) | Lower priority than runtime pipeline | Step 10+ |
 | No memory domain tables (5 tables) | Requires memory transformation service | Post-runtime step |
 | No knowledge/sources tables (4 tables) | Requires file processing pipeline | Later step |
-| No audit_logs table | Admin panel step | Step 9 |
-| `require_admin()` delegates to `require_user()` | Admin panel step | Step 9 |
+| `runtime_failure_records` separate table not created | Failures visible via admin/runtime from simulation_runs | LOW |
 | No subscription/plan change/payment API | Requires BIL-04 to BIL-08 | Post-launch |
 | Group actions (5) not enabled in OASIS | Group simulation features deferred | Later step |
 | No report_chat tables | Interactive report chat deferred | Later step |
