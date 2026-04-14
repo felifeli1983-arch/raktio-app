@@ -26,6 +26,7 @@ from app.services.simulation_service import estimate_credits
 async def launch_simulation(
     simulation_id: uuid.UUID,
     workspace_id: uuid.UUID,
+    run_oasis: bool = True,
 ) -> dict[str, Any]:
     """
     Launch a simulation run.
@@ -155,16 +156,30 @@ async def launch_simulation(
             "final_runtime_config_json": runtime_config,
         })
 
+        # 8. Execute OASIS simulation
+        oasis_result = None
+        if run_oasis:
+            from app.runtime.oasis_worker import run_oasis_simulation
+            oasis_result = await run_oasis_simulation(
+                runtime_config=runtime_config,
+                simulation_id=str(simulation_id),
+                workspace_id=str(workspace_id),
+                run_id=str(run_id),
+            )
+
+        result_status = "bootstrapping"
+        if oasis_result:
+            result_status = oasis_result.get("final_status", "bootstrapping")
+
         return {
             "run_id": str(run_id),
-            "status": "bootstrapping",
+            "status": result_status,
             "agent_count": runtime_config["agent_count"],
             "platform_type": runtime_config["platform_type"],
             "duration_steps": runtime_config["duration_steps"],
             "run_workspace_path": runtime_config["run_workspace_path"],
             "credit_reserved": credit_cost,
-            "note": "OASIS execution will be dispatched to background worker. "
-                    "Monitor via GET /api/simulations/{id} or SSE stream.",
+            "oasis_result": oasis_result,
         }
 
     except Exception as exc:
