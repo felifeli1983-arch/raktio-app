@@ -365,10 +365,17 @@ require rework. Real OASIS execution is the single highest-priority work item.
 
 This prerequisite block must complete before Step 8 begins.
 
-**Step 7.5A — Verify OASIS environment**
-1. Confirm oasis-main/ is importable, install deps
-2. Run OASIS quick_start example to verify it works
-3. Inspect real OASIS SQLite schema, compare with event_bridge assumptions
+**Step 7.5A — Verify OASIS environment** ✅ COMPLETED
+- OASIS v0.2.5 imports successfully on Python 3.12 (despite pyproject.toml saying <3.12)
+- Required deps installed: numpy, pandas, torch (CPU), sentence-transformers, camel-ai 0.2.78, igraph, neo4j
+- Smoke test passed: 2 agents, 3 steps, DeepSeek as LLM → real posts, comments, likes in SQLite
+- OASIS API surface confirmed: `oasis.make()`, `env.reset()`, `env.step()`, `env.close()`, `SocialAgent`, `UserInfo`, `AgentGraph`, `LLMAction`, `ManualAction`, 31 `ActionType` members, `DefaultPlatformType.TWITTER/REDDIT`
+- `SocialAgent` requires `camel.models.ModelFactory.create()` model, not raw API key
+- DeepSeek works via `ModelPlatformType.OPENAI_COMPATIBLE_MODEL` with url `https://api.deepseek.com/v1`
+- Real SQLite schema: 17 tables (user, post, comment, like, dislike, follow, mute, rec, trace, report, + group/product/sqlite_sequence)
+- **CRITICAL: `trace` table is the primary event source** — records every agent action with JSON info. Current event_bridge.py ignores it entirely.
+- **event_bridge.py mismatches**: `like` is SQL reserved word (needs quoting), comments not read, trace not read, user table not used for ID mapping, rec table not used for exposure
+- Fixes required before 7.5B: rewrite event_bridge.py against real schema (will be done in 7.5C)
 
 **Step 7.5B — OASIS runtime worker**
 1. Implement runtime/oasis_worker.py — actual env.step() loop
