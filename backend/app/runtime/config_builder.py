@@ -101,6 +101,7 @@ def build_run_config(
                 "profession": agent.get("profession", ""),
                 "interests": agent.get("interests", []),
                 "stance": participant.get("runtime_stance", "neutral"),
+                "influence_weight": agent.get("influence_weight", 1.0),
             },
             "recsys_type": recsys_type,
             "active_platforms": active_platforms,
@@ -174,7 +175,17 @@ def _build_agent_description(agent: dict, participant: dict) -> str:
 
     stance = participant.get("runtime_stance", "neutral")
     activity = agent.get("activity_level", "medium")
-    parts.append(f"{stance} stance, {activity} activity")
+    influence = agent.get("influence_weight", 1.0)
+
+    # Classify influence level for description
+    if influence >= 2.0:
+        influence_label = "high influence"
+    elif influence <= 0.5:
+        influence_label = "low influence"
+    else:
+        influence_label = "moderate influence"
+
+    parts.append(f"{stance} stance, {activity} activity, {influence_label}")
 
     interests = agent.get("interests", [])
     if interests and isinstance(interests, list):

@@ -101,12 +101,17 @@ def select_active_agents(
     min_active: int = 1,
 ) -> list[Any]:
     """
-    Select which agents are active during this step based on daypart.
+    Select which agents are active during this step based on daypart,
+    activity level, and influence weight.
 
-    Each agent's individual activity level also modifies their probability:
-    - high activity: multiplier × 1.3 (capped at 1.0)
-    - medium activity: multiplier × 1.0
-    - low activity: multiplier × 0.6
+    Modifiers applied to base daypart multiplier:
+    - Activity level: high=×1.3, medium=×1.0, low=×0.6
+    - Influence weight: high_influence=×1.2, low_influence=×0.8
+      (extracted from agent description keywords)
+
+    High-influence agents are more likely to be active, creating more
+    content and thus achieving higher natural reach through the recsys.
+    This is probabilistic, not deterministic.
 
     Args:
         all_agents: List of (agent_index, agent_object) tuples from AgentGraph
@@ -121,18 +126,25 @@ def select_active_agents(
 
     active = []
     for idx, agent in all_agents:
-        # Get agent's activity level from their UserInfo description
         agent_multiplier = multiplier
         desc = ""
         if hasattr(agent, "user_info") and agent.user_info:
             desc = (agent.user_info.description or "").lower()
 
+        # Activity level modifier
         if "high activity" in desc:
-            agent_multiplier = min(1.0, multiplier * 1.3)
+            agent_multiplier *= 1.3
         elif "low activity" in desc:
-            agent_multiplier = multiplier * 0.6
+            agent_multiplier *= 0.6
 
-        # Probabilistic selection
+        # Influence weight modifier
+        if "high influence" in desc or "macro" in desc:
+            agent_multiplier *= 1.2
+        elif "low influence" in desc or "nano" in desc:
+            agent_multiplier *= 0.8
+
+        agent_multiplier = min(1.0, agent_multiplier)
+
         if random.random() < agent_multiplier:
             active.append((idx, agent))
 
