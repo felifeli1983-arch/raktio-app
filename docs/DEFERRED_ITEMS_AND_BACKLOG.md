@@ -206,30 +206,26 @@
 - **Timing**: DO BEFORE FRONTEND
 - **Status**: DEFERRED
 
-### PLAT-01: LinkedIn runtime behavior model
+### PLAT-01: LinkedIn runtime behavior model ✅ DONE (prompt-level)
 - **Area**: Platform
-- **Description**: LinkedIn simulations currently use Twitter OASIS mode with "LinkedIn" label. Need: professional tone weighting, higher reputation signaling, lower aggression default, longer-form content tendency, connection-based (not follower-based) reach.
-- **Why it matters**: LinkedIn users behave fundamentally differently than Twitter users. Credible LinkedIn simulation requires runtime-level behavioral differences.
-- **Priority**: MEDIUM
-- **Type**: Missing feature
-- **Dependencies**: Step 10.5H (platform action weight profiles)
-- **Timing**: Step 10.5H
-- **Status**: DEFERRED
+- **Description**: LinkedIn profile implemented in `platform_profiles.py`: professional tone, formal, long-form, low controversy tolerance, peak shift -4h. Behavioral prompt: "Write professionally, signal expertise, no slang." Limitation: still runs on Twitter OASIS backend — differences are prompt-level, not engine-level.
+- **Status**: DONE (Step 10.5H) — prompt-level approximation. Full OASIS platform engine for LinkedIn remains deferred (PLAT-04).
 
-### PLAT-02: Instagram runtime behavior model
-- **Area**: Platform
-- **Description**: Instagram simulations need: more visual framing, shorter comments, aesthetic/social proof emphasis, weaker explicit dislike semantics, higher like-to-comment ratio.
-- **Priority**: MEDIUM
-- **Dependencies**: Step 10.5H
-- **Timing**: Step 10.5H
-- **Status**: DEFERRED
+### PLAT-02: Instagram runtime behavior model ✅ DONE (prompt-level)
+- **Description**: Instagram profile: visual framing, high like tendency, low comment, aspirational tone, heavy hashtags. Prompt: "Frame posts as visual moments, like generously, avoid confrontation."
+- **Status**: DONE (Step 10.5H) — prompt-level approximation.
 
-### PLAT-03: TikTok runtime behavior model
+### PLAT-03: TikTok runtime behavior model ✅ DONE (prompt-level)
+- **Description**: TikTok profile: rapid/trendy/slang, high share, peak shift -2h. Prompt: "React fast, use trendy language, be authentic."
+- **Status**: DONE (Step 10.5H) — prompt-level approximation.
+
+### PLAT-04: Full OASIS platform engines (beyond prompt approximation)
 - **Area**: Platform
-- **Description**: TikTok simulations need: rapid reaction cycles, trend/slang influence, very short commentary, faster polarizing spread, higher reshare tendency.
+- **Description**: Current platform behavior is prompt-level approximation only — all non-Reddit platforms run on Twitter OASIS backend. True platform engine differentiation would require: custom OASIS Platform implementations per platform (different action weight probabilities, different content format constraints, different recsys behaviors). This is a significant engineering effort.
+- **Why deferred**: Prompt-level approximation creates meaningful behavioral differentiation. Full engine changes require OASIS fork.
 - **Priority**: LOW
-- **Dependencies**: Step 10.5H
-- **Timing**: Step 10.5H
+- **Type**: Architecture follow-up
+- **Timing**: CAN WAIT
 - **Status**: DEFERRED
 
 ---

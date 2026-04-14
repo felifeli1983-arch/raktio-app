@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
-> Last updated: 2026-04-14
-> Last completed step: **Step 10.5F-G — Source/Knowledge Ingestion**
+> Last updated: 2026-04-15
+> Last completed step: **Step 10.5H — Platform Behavior Layer (Step 10.5 COMPLETE)**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -53,7 +53,7 @@
 | 10.5E | Distribution: influence-weighted reach | **PASS** |
 | 10.5F | Source/Knowledge: tables + file upload | **PASS** |
 | 10.5G | Source/Knowledge: source-aware brief | **PASS** |
-| 10.5H | Platform behavior: action weight profiles | NOT STARTED |
+| 10.5H | Platform behavior: action weight profiles | **PASS** |
 | 11 | Frontend Pages | NOT STARTED |
 | 12 | Integration Testing | NOT STARTED |
 
