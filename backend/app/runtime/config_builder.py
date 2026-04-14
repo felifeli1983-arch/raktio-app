@@ -187,6 +187,19 @@ def _build_agent_description(agent: dict, participant: dict) -> str:
 
     parts.append(f"{stance} stance, {activity} activity, {influence_label}")
 
+    # High-influence agents get explicit behavioral guidance
+    if influence >= 2.0:
+        parts.append(
+            "As a high-influence voice, you tend to create authoritative content "
+            "that sparks discussion. You post frequently and others often engage "
+            "with your content"
+        )
+    elif influence <= 0.5:
+        parts.append(
+            "You tend to observe and react to others' content more than creating "
+            "your own. You are more likely to like, comment, or follow than to post"
+        )
+
     interests = agent.get("interests", [])
     if interests and isinstance(interests, list):
         parts.append(f"interested in {', '.join(interests[:5])}")
