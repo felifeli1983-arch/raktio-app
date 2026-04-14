@@ -299,6 +299,39 @@
 - **Recommended step**: Step 8
 - **Status**: DEFERRED
 
+### BIL-06: Add-on modular pricing
+- **Area**: Billing
+- **Description**: The credit formula currently covers agents × duration × platform × geography. PRICING_AND_CREDITS.md specifies add-on modular pricing as a separate cost factor (e.g., report depth, interview access, extended memory). No add-on pricing logic exists.
+- **Why deferred**: Core formula works. Add-ons require product definition of which features are add-ons and their cost weights.
+- **Dependencies**: None (formula infrastructure exists)
+- **Priority**: LOW
+- **Type**: Missing feature
+- **Related files**: `billing/credit_rules.py`
+- **Recommended step**: Product refinement step
+- **Status**: DEFERRED
+
+### BIL-07: Plan change API (upgrade/downgrade)
+- **Area**: Billing
+- **Description**: No API for changing an organization's plan. Currently `organizations.plan_id` can only be set at creation time or via direct DB edit. Users cannot upgrade, downgrade, or manage their subscription from the product.
+- **Why deferred**: Requires BIL-04 (subscriptions table) for proper plan period tracking, proration logic, and billing cycle management.
+- **Dependencies**: BIL-04
+- **Priority**: MEDIUM
+- **Type**: Missing feature
+- **Related files**: `api/billing.py`, `services/billing_service.py`
+- **Recommended step**: Post-Step 8 billing refinement
+- **Status**: DEFERRED
+
+### BIL-08: Payment provider integration
+- **Area**: Billing
+- **Description**: No integration with a payment provider (Stripe, Paddle, etc.). Credit purchases, plan subscriptions, and invoicing all require external payment processing. Currently credits can only be set via direct DB operations.
+- **Why deferred**: Requires payment provider selection, account setup, webhook handling, and checkout flow. This is a product/business decision, not just a code task.
+- **Dependencies**: BIL-04, BIL-05, BIL-07
+- **Priority**: MEDIUM
+- **Type**: Missing feature / integration
+- **Related files**: `api/billing.py`, `services/billing_service.py`
+- **Recommended step**: Dedicated payment integration step (pre-launch)
+- **Status**: DEFERRED
+
 ---
 
 ## Admin / Governance

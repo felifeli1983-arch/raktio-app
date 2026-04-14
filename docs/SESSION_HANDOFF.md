@@ -216,7 +216,7 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 | No knowledge/sources tables (4 tables) | Requires file processing pipeline | Later step |
 | No audit_logs table | Admin panel step | Step 9 |
 | `require_admin()` delegates to `require_user()` | Admin panel step | Step 9 |
-| Credit formula only uses agents × duration | Full formula needs platform + geography factors | Step 8 |
+| No subscription/plan change/payment API | Requires BIL-04 to BIL-08 | Post-launch |
 | Group actions (5) not enabled in OASIS | Group simulation features deferred | Later step |
 | No report_chat tables | Interactive report chat deferred | Later step |
 | ~80 frontend files are stubs | Frontend implementation step | Step 11 |
