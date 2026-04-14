@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 10.5C — Memory-Informed Agent Context (Memory System COMPLETE)**
+> Last completed step: **Step 10.5D — Temporal Activity Multipliers**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -49,7 +49,7 @@
 | 10.5A | Memory domain tables (migration 008) | **PASS** |
 | 10.5B | Post-run memory transformation service | **PASS** |
 | 10.5C | Memory-informed agent context | **PASS** |
-| 10.5D | Distribution: temporal activity multipliers | NOT STARTED |
+| 10.5D | Distribution: temporal activity multipliers | **PASS** |
 | 10.5E | Distribution: influence-weighted reach | NOT STARTED |
 | 10.5F | Source/Knowledge: tables + file upload | NOT STARTED |
 | 10.5G | Source/Knowledge: source-aware brief | NOT STARTED |
