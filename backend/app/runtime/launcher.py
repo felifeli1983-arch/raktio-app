@@ -156,30 +156,40 @@ async def launch_simulation(
             "final_runtime_config_json": runtime_config,
         })
 
-        # 8. Execute OASIS simulation
-        oasis_result = None
+        # 8. Dispatch OASIS simulation as background task
+        #    Returns immediately so the client can connect to SSE stream.
+        #    The worker updates status/SQLite as it runs.
+        #    In production, this should be an ARQ job dispatch instead.
         if run_oasis:
+            import asyncio
             from app.runtime.oasis_worker import run_oasis_simulation
-            oasis_result = await run_oasis_simulation(
-                runtime_config=runtime_config,
-                simulation_id=str(simulation_id),
-                workspace_id=str(workspace_id),
-                run_id=str(run_id),
-            )
 
-        result_status = "bootstrapping"
-        if oasis_result:
-            result_status = oasis_result.get("final_status", "bootstrapping")
+            async def _run_in_background():
+                try:
+                    await run_oasis_simulation(
+                        runtime_config=runtime_config,
+                        simulation_id=str(simulation_id),
+                        workspace_id=str(workspace_id),
+                        run_id=str(run_id),
+                    )
+                except Exception as exc:
+                    import logging
+                    logging.getLogger("raktio.launcher").error(
+                        f"Background OASIS run failed: {exc}"
+                    )
+
+            asyncio.create_task(_run_in_background())
 
         return {
             "run_id": str(run_id),
-            "status": result_status,
+            "status": "bootstrapping",
             "agent_count": runtime_config["agent_count"],
             "platform_type": runtime_config["platform_type"],
             "duration_steps": runtime_config["duration_steps"],
             "run_workspace_path": runtime_config["run_workspace_path"],
             "credit_reserved": credit_cost,
-            "oasis_result": oasis_result,
+            "note": "OASIS simulation dispatched as background task. "
+                    "Connect to GET /api/stream/{id} for live events.",
         }
 
     except Exception as exc:
