@@ -32,6 +32,7 @@ from app.adapters.llm_adapter import llm_adapter
 from app.config import ModelRoute
 from app.repositories import reports as report_repo
 from app.repositories import simulations as sim_repo
+from app.runtime.event_bridge import build_evidence_bundle
 
 # Section generation order (progressive)
 # Section generation order (progressive).
@@ -55,7 +56,16 @@ REPORT_SECTIONS = [
 
 REPORT_SYSTEM = """You are the Report Generator module of Raktio, a social reaction simulation platform.
 
-You generate one section of a simulation report at a time. Each section must be evidence-backed, specific, and actionable.
+You generate one section of a simulation report at a time.
+
+When runtime_evidence is provided (has_runtime_evidence=true), you MUST:
+- Reference specific posts, comments, and agent actions from the evidence
+- Cite real event counts and agent activity data
+- Quote actual post/comment content as evidence
+- Base findings on what actually happened, not speculation
+
+When runtime_evidence is NOT provided, clearly state that findings are
+based on simulation configuration only.
 
 Output valid JSON with this structure:
 {
@@ -70,8 +80,8 @@ Output valid JSON with this structure:
 Rules:
 - content_markdown: well-formatted markdown for display
 - structured_json: machine-readable structured data for the same content
-- Be specific and reference simulation data where available
-- Include confidence qualifiers where appropriate
+- When evidence exists, cite specific posts/comments by quoting them
+- Include real metrics (post count, comment count, like count, etc.)
 - Always output valid JSON, nothing else
 """
 
@@ -132,6 +142,12 @@ async def generate_report(
     config = sim_repo.get_latest_config(simulation_id)
     planner_rec = config.get("planner_recommendation_json", {}) if config else {}
 
+    # Get runtime evidence from OASIS SQLite (if available)
+    runtime_evidence = {}
+    sqlite_path = run.get("sqlite_path") if run else None
+    if sqlite_path:
+        runtime_evidence = build_evidence_bundle(sqlite_path)
+
     sim_context = {
         "simulation_name": row.get("name"),
         "brief_text": row.get("brief_text"),
@@ -140,6 +156,8 @@ async def generate_report(
         "agent_count": row.get("agent_count_final"),
         "duration": row.get("duration_preset"),
         "platforms": row.get("platform_scope"),
+        "has_runtime_evidence": bool(runtime_evidence),
+        "runtime_evidence": runtime_evidence,
     }
 
     # Generate sections progressively
@@ -205,18 +223,94 @@ async def _generate_section(
         "faction_analysis": "Explain social structure changes. Faction emergence, echo chambers, follow clusters, bridge roles, de-escalators.",
         "recommendations": "Provide 5-8 actionable recommendations based on the simulation results. Be specific and strategic.",
         "evidence": "Summarize the key evidence supporting the findings. Reference specific events, posts, or patterns.",
-        "confidence_limitations": "Assess the confidence level of this analysis. Note limitations, assumptions, and areas where more data would help. NOTE: This report is generated from simulation configuration and planner data. True evidence-backed reporting depends on real OASIS runtime execution, which is not yet wired.",
+        "confidence_limitations": "Assess the confidence level of this analysis. Note limitations and assumptions.",
     }
 
-    prompt = (
-        f"## Simulation Context\n"
-        f"```json\n{json.dumps(sim_context, indent=2, default=str)}\n```\n\n"
-    )
+    # Build context block — exclude heavy evidence from JSON to stay within token limits
+    context_for_prompt = {
+        "simulation_name": sim_context.get("simulation_name"),
+        "brief_text": sim_context.get("brief_text"),
+        "agent_count": sim_context.get("agent_count"),
+        "duration": sim_context.get("duration"),
+        "platforms": sim_context.get("platforms"),
+        "has_runtime_evidence": sim_context.get("has_runtime_evidence", False),
+    }
 
+    prompt = f"## Simulation Setup\n```json\n{json.dumps(context_for_prompt, indent=2, default=str)}\n```\n\n"
+
+    # Add runtime evidence if available
+    evidence = sim_context.get("runtime_evidence", {})
+    if evidence:
+        prompt += "## Runtime Evidence (from real OASIS simulation)\n\n"
+
+        # Event counts
+        counts = evidence.get("event_counts", {})
+        prompt += f"### Event Counts\n"
+        prompt += f"- Posts: {counts.get('post', 0)}\n"
+        prompt += f"- Comments: {counts.get('comment', 0)}\n"
+        prompt += f"- Likes: {counts.get('like', 0)}\n"
+        prompt += f"- Dislikes: {counts.get('dislike', 0)}\n"
+        prompt += f"- Follows: {counts.get('follow', 0)}\n"
+        prompt += f"- Mutes: {counts.get('mute', 0)}\n"
+        prompt += f"- Reports: {counts.get('report', 0)}\n"
+        prompt += f"- Total trace events: {counts.get('trace', 0)}\n"
+        prompt += f"- Exposure records: {evidence.get('exposure_records', 0)}\n\n"
+
+        # Action summary
+        action_summary = evidence.get("action_summary", {})
+        if action_summary:
+            prompt += f"### Action Summary\n"
+            for action, count in sorted(action_summary.items(), key=lambda x: -x[1]):
+                if action not in ("refresh", "sign_up"):
+                    prompt += f"- {action}: {count}\n"
+            prompt += "\n"
+
+        # Top posts (with actual content)
+        top_posts = evidence.get("top_posts", [])
+        if top_posts:
+            prompt += "### Top Posts (by engagement)\n"
+            for p in top_posts[:5]:
+                content = (p.get("content") or "")[:200]
+                prompt += (
+                    f"- **{p.get('username', '?')}**: \"{content}\"\n"
+                    f"  (likes: {p.get('num_likes', 0)}, "
+                    f"dislikes: {p.get('num_dislikes', 0)}, "
+                    f"shares: {p.get('num_shares', 0)})\n"
+                )
+            prompt += "\n"
+
+        # Sample comments (with actual content)
+        sample_comments = evidence.get("sample_comments", [])
+        if sample_comments:
+            prompt += "### Sample Comments\n"
+            for c in sample_comments[:8]:
+                content = (c.get("content") or "")[:150]
+                prompt += (
+                    f"- **{c.get('username', '?')}** on post {c.get('post_id')}: "
+                    f"\"{content}\"\n"
+                )
+            prompt += "\n"
+
+        # Per-agent activity
+        agent_activity = evidence.get("agent_activity", {})
+        if agent_activity:
+            prompt += "### Per-Agent Activity\n"
+            for agent, acts in agent_activity.items():
+                act_str = ", ".join(f"{k}: {v}" for k, v in acts.items())
+                prompt += f"- **{agent}**: {act_str}\n"
+            prompt += "\n"
+    else:
+        prompt += (
+            "## Note\n"
+            "No runtime evidence available. This report is based on simulation "
+            "configuration and planner data only. Findings are speculative.\n\n"
+        )
+
+    # Previous sections for coherence
     if previous_sections:
         prompt += "## Previous Sections Already Generated\n"
         for key, data in previous_sections.items():
-            prompt += f"### {key}\n{data.get('content_markdown', '')[:500]}\n\n"
+            prompt += f"### {key}\n{data.get('content_markdown', '')[:400]}\n\n"
 
     prompt += (
         f"## Task\n"

@@ -1,24 +1,37 @@
 """
 Raktio Adapter — Stream Adapter
 
-Abstraction layer over SSE transport for simulation event streaming.
-Manages concurrent listeners and event distribution.
+STATUS: DEFERRED — Not active in the current architecture.
 
-STATUS: NOT YET WIRED into api/stream.py.
-The SSE endpoint currently polls state_reader directly.
-This adapter will be wired when the OASIS runtime worker publishes
-events in real-time via stream_manager.publish().
+Current streaming model (as of Step 7.5D):
+  The SSE endpoint (api/stream.py) polls the OASIS SQLite trace table
+  every 2 seconds via state_reader → event_bridge.read_events_from_trace().
+  This works correctly for real-time event delivery during live runs.
 
-Currently supports SSE only. WebSocket support can be added later
-by implementing a WebSocket variant of the same interface.
+Why polling is used instead of this adapter:
+  OASIS writes to SQLite natively during env.step(). Polling the SQLite
+  is the simplest correct approach that requires zero modification to the
+  OASIS engine. The adapter pattern (in-memory pub/sub with concurrent
+  listener queues) would require the OASIS worker to dual-write events
+  to both SQLite and an in-memory bus, adding complexity for no functional
+  gain at current scale.
+
+When this adapter should be activated:
+  - When concurrent SSE listeners per simulation exceed ~50
+  - When polling latency (2s) becomes unacceptable for UX
+  - When the OASIS worker is refactored to publish events via a message bus
+  At that point, wire stream_manager.publish() into the worker step loop
+  and replace the polling in api/stream.py with stream_manager.subscribe().
+
+The code below is preserved as the intended future architecture.
+It is NOT imported or referenced by any active code path.
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
-from typing import Any, AsyncIterator
 from dataclasses import dataclass, field
+from typing import Any, AsyncIterator
 
 
 @dataclass
@@ -28,28 +41,23 @@ class StreamChannel:
     listeners: list[asyncio.Queue] = field(default_factory=list)
 
     def add_listener(self) -> asyncio.Queue:
-        """Add a new listener and return its queue."""
         queue: asyncio.Queue = asyncio.Queue(maxsize=100)
         self.listeners.append(queue)
         return queue
 
     def remove_listener(self, queue: asyncio.Queue) -> None:
-        """Remove a listener."""
         if queue in self.listeners:
             self.listeners.remove(queue)
 
     async def broadcast(self, event_type: str, data: dict[str, Any]) -> None:
-        """Broadcast an event to all listeners."""
         message = {"event": event_type, "data": data}
-        dead_listeners = []
-
+        dead = []
         for queue in self.listeners:
             try:
                 queue.put_nowait(message)
             except asyncio.QueueFull:
-                dead_listeners.append(queue)
-
-        for q in dead_listeners:
+                dead.append(queue)
+        for q in dead:
             self.remove_listener(q)
 
 
@@ -60,22 +68,18 @@ class StreamManager:
         self._channels: dict[str, StreamChannel] = {}
 
     def get_channel(self, simulation_id: str) -> StreamChannel:
-        """Get or create a channel for a simulation."""
         if simulation_id not in self._channels:
             self._channels[simulation_id] = StreamChannel(simulation_id=simulation_id)
         return self._channels[simulation_id]
 
     def remove_channel(self, simulation_id: str) -> None:
-        """Remove a channel when a simulation ends."""
         self._channels.pop(simulation_id, None)
 
     async def publish(self, simulation_id: str, event_type: str, data: dict[str, Any]) -> None:
-        """Publish an event to a simulation's channel."""
         channel = self.get_channel(simulation_id)
         await channel.broadcast(event_type, data)
 
     async def subscribe(self, simulation_id: str) -> AsyncIterator[dict[str, Any]]:
-        """Subscribe to a simulation's event stream."""
         channel = self.get_channel(simulation_id)
         queue = channel.add_listener()
         try:
@@ -86,5 +90,6 @@ class StreamManager:
             channel.remove_listener(queue)
 
 
-# Singleton instance
-stream_manager = StreamManager()
+# NOT instantiated — this module is inactive.
+# Uncomment when wiring the push-based streaming model:
+# stream_manager = StreamManager()
