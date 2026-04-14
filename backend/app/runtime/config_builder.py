@@ -23,6 +23,7 @@ from typing import Any
 
 from app.config import settings
 from app.repositories import memory as mem_repo
+from app.runtime.platform_profiles import get_profile, get_oasis_backend, get_behavior_prompt
 from app.runtime.constants import (
     INFLUENCE_HIGH_LABEL, INFLUENCE_LOW_LABEL, INFLUENCE_MODERATE_LABEL,
     INFLUENCE_HIGH_THRESHOLD, INFLUENCE_LOW_THRESHOLD,
@@ -66,27 +67,25 @@ def build_run_config(
     agent_id_to_participant = {p["agent_id"]: p for p in participants}
     agent_id_to_agent = {a["agent_id"]: a for a in agents}
 
+    # Determine simulation-level primary platform
+    sim_platform_scope = simulation_row.get("platform_scope", ["x"])
+    if isinstance(sim_platform_scope, str):
+        sim_platform_scope = json.loads(sim_platform_scope)
+    sim_primary_platform = sim_platform_scope[0] if sim_platform_scope else "x"
+    sim_platform_profile = get_profile(sim_primary_platform)
+
     # Build OASIS agent configs
     agent_configs = []
     for i, participant in enumerate(participants):
         agent_id = participant["agent_id"]
         agent = agent_id_to_agent.get(agent_id, {})
 
-        # Determine recsys type from platform
         active_platforms = participant.get("active_platforms_json", ["x"])
         if isinstance(active_platforms, str):
             active_platforms = json.loads(active_platforms)
 
-        # Map Raktio platform to OASIS recsys type
-        primary_platform = active_platforms[0] if active_platforms else "x"
-        recsys_map = {
-            "x": "twitter",
-            "reddit": "reddit",
-            "instagram": "twitter",
-            "tiktok": "twitter",
-            "linkedin": "twitter",
-        }
-        recsys_type = recsys_map.get(primary_platform, "twitter")
+        agent_primary = active_platforms[0] if active_platforms else sim_primary_platform
+        recsys_type = get_oasis_backend(agent_primary)
 
         # Build UserInfo-compatible config
         agent_config = {
@@ -94,7 +93,7 @@ def build_run_config(
             "agent_id": agent_id,
             "user_name": agent.get("username", f"agent_{i}"),
             "name": agent.get("display_name", f"Agent {i}"),
-            "description": _build_agent_description(agent, participant),
+            "description": _build_agent_description(agent, participant, sim_primary_platform),
             "profile": {
                 "gender": agent.get("gender", ""),
                 "age": agent.get("age", 30),
@@ -117,14 +116,7 @@ def build_run_config(
         platform_scope = json.loads(platform_scope)
 
     primary_platform = platform_scope[0] if platform_scope else "x"
-    oasis_platform_map = {
-        "x": "twitter",
-        "reddit": "reddit",
-        "instagram": "twitter",
-        "tiktok": "twitter",
-        "linkedin": "twitter",
-    }
-    platform_type = oasis_platform_map.get(primary_platform, "twitter")
+    platform_type = get_oasis_backend(primary_platform)
 
     # Calculate duration steps
     duration_preset = simulation_row.get("duration_preset", "24h")
@@ -145,6 +137,8 @@ def build_run_config(
         "duration_steps": duration_steps,
         "duration_preset": duration_preset,
         "brief_text": simulation_row.get("brief_text", ""),
+        "primary_platform": sim_primary_platform,
+        "peak_hours_shift": sim_platform_profile.peak_hours_shift,
         "created_at": datetime.utcnow().isoformat(),
     }
 
@@ -156,16 +150,17 @@ def build_run_config(
     return runtime_config
 
 
-def _build_agent_description(agent: dict, participant: dict) -> str:
+def _build_agent_description(agent: dict, participant: dict, platform: str = "x") -> str:
     """
     Build a human-readable description for OASIS UserInfo.
 
-    Includes persistent memory context if the agent has participated
-    in previous simulations. Memory is kept concise to control token usage:
-    - Summary text (max 200 chars)
-    - Top topic exposures (max 5)
-    - Recent stance tendency
-    Total memory addition: ~50-100 words max.
+    Includes:
+    - Agent identity (profession, location, stance, activity, influence)
+    - Platform-specific behavioral guidance
+    - Influence-level behavioral guidance
+    - Persistent memory context (if returning agent)
+
+    Token budget: ~400-600 chars total (measured).
     """
     parts = []
 
@@ -206,6 +201,11 @@ def _build_agent_description(agent: dict, participant: dict) -> str:
     interests = agent.get("interests", [])
     if interests and isinstance(interests, list):
         parts.append(f"interested in {', '.join(interests[:5])}")
+
+    # Platform-specific behavioral guidance
+    platform_prompt = get_behavior_prompt(platform)
+    if platform_prompt:
+        parts.append(platform_prompt)
 
     # Inject persistent memory context (if available)
     memory_context = _get_memory_context(agent.get("agent_id"))

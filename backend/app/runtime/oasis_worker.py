@@ -225,13 +225,16 @@ async def run_oasis_simulation(
     try:
         from app.runtime.temporal import select_active_agents, get_step_metadata
 
+        # Platform-specific peak hours shift
+        peak_shift = runtime_config.get("peak_hours_shift", 0)
+        effective_start = 8 + peak_shift
+
         for step_num in range(1, duration_steps + 1):
-            # Temporal activity: select which agents act this step
             all_agents = list(env.agent_graph.get_agents())
             active_agents = select_active_agents(
-                all_agents, step_num, start_hour=8, min_active=1,
+                all_agents, step_num, start_hour=effective_start, min_active=1,
             )
-            step_meta = get_step_metadata(step_num, start_hour=8)
+            step_meta = get_step_metadata(step_num, start_hour=effective_start)
 
             logger.info(
                 f"Step {step_num}/{duration_steps} "
