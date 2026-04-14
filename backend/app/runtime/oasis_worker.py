@@ -3,25 +3,31 @@ Raktio Runtime — OASIS Worker
 
 Executes a real OASIS simulation using env.step() loop.
 
-This module is the bridge between the Raktio product layer and the
-OASIS runtime engine. It:
-  1. Imports OASIS from the local oasis-main/ directory
-  2. Creates camel-ai model backends (DeepSeek for RUNTIME route)
-  3. Builds SocialAgent instances with UserInfo configs
-  4. Constructs AgentGraph
-  5. Calls oasis.make() → env.reset() → env.step() loop → env.close()
-  6. Updates simulation/run status in Supabase during execution
+Status lifecycle (explicit and authoritative):
+
+  SIMULATION STATUS (simulations.status):
+    draft → cost_check → bootstrapping → running → completing → completed
+                                                  ↘ failed
+                                                  ↘ canceled (via supervisor)
+    - cost_check:     set by launcher before credit reservation
+    - bootstrapping:  set by launcher after run record created
+    - running:        set by this worker when env.reset() succeeds
+    - completing:     set by this worker when all env.step() finish
+    - completed:      set by this worker after env.close() succeeds
+    - failed:         set by this worker if any step throws
+    - reporting:      set by report_service when report generation starts
+    - canceled/paused: set by supervisor
+
+  RUN STATUS (simulation_runs.status):
+    bootstrapping → running → completed
+                            ↘ failed
+                            ↘ canceled / paused (via supervisor)
+    - Run tracks the OASIS process state only.
+    - Simulation status tracks the full product lifecycle.
 
 Execution model:
   Currently runs synchronously in-process. In production, this should
   be dispatched to an ARQ background worker to avoid blocking the API.
-
-OASIS requirements (confirmed in Step 7.5A):
-  - Python path must include oasis-main/
-  - Model must be created via camel.models.ModelFactory.create()
-  - SocialAgent needs integer agent_id, UserInfo, model, AgentGraph
-  - DefaultPlatformType.REDDIT or .TWITTER
-  - env.step() takes {agent: LLMAction()} dict
 """
 
 from __future__ import annotations
@@ -115,17 +121,43 @@ async def run_oasis_simulation(
     model = _create_deepseek_model()
 
     # ── 2. Define available actions ──
+    #
+    # Full social action set. Excludes only internal OASIS mechanics
+    # (REFRESH, SIGNUP, UPDATE_REC_TABLE, EXIT) and special actions
+    # (INTERVIEW — triggered manually, PURCHASE_PRODUCT — not social).
+    # Group actions (JOIN/LEAVE/SEND/CREATE/LISTEN_FROM_GROUP) are
+    # deferred until group simulation features are implemented.
+    #
+    # This set covers: content creation, reactions, discovery,
+    # relationships, moderation, and passive observation.
     available_actions = [
+        # Content creation
         ActionType.CREATE_POST,
         ActionType.CREATE_COMMENT,
+        ActionType.REPOST,
+        ActionType.QUOTE_POST,
+        # Post reactions
         ActionType.LIKE_POST,
+        ActionType.UNLIKE_POST,
         ActionType.DISLIKE_POST,
+        ActionType.UNDO_DISLIKE_POST,
+        # Comment reactions
+        ActionType.LIKE_COMMENT,
+        ActionType.UNLIKE_COMMENT,
+        ActionType.DISLIKE_COMMENT,
+        ActionType.UNDO_DISLIKE_COMMENT,
+        # Relationships
         ActionType.FOLLOW,
         ActionType.UNFOLLOW,
         ActionType.MUTE,
-        ActionType.REPOST,
-        ActionType.QUOTE_POST,
+        ActionType.UNMUTE,
+        # Discovery
         ActionType.SEARCH_POSTS,
+        ActionType.SEARCH_USER,
+        ActionType.TREND,
+        # Moderation
+        ActionType.REPORT_POST,
+        # Passive
         ActionType.DO_NOTHING,
     ]
 
@@ -214,14 +246,19 @@ async def run_oasis_simulation(
         logger.error(error_msg)
         execution_summary["errors"].append(error_msg)
 
-    # ── 8. Close environment ──
+    # ── 8. Transition to completing ──
+    if not execution_summary["errors"]:
+        _update_status(simulation_id, workspace_id, run_id, "completing")
+        logger.info("All steps done, completing...")
+
+    # ── 9. Close environment ──
     try:
         await env.close()
         logger.info("Environment closed")
     except Exception as exc:
         logger.warning(f"Error closing environment: {exc}")
 
-    # ── 9. Determine final status ──
+    # ── 10. Determine final status ──
     if execution_summary["errors"]:
         final_status = "failed"
         failure_reason = "; ".join(execution_summary["errors"])
@@ -276,14 +313,22 @@ def _finalize_run(
     status: str,
     failure_reason: str | None,
 ) -> None:
-    """Finalize the run after OASIS execution completes."""
+    """
+    Finalize the run after OASIS execution completes.
+
+    Status mapping:
+      run completed → sim completing → sim completed (all in one call)
+      run failed    → sim failed
+    """
     import uuid as uuid_mod
     now = datetime.now(timezone.utc).isoformat()
 
     run_update: dict[str, Any] = {"status": status}
     if status == "completed":
         run_update["completed_at"] = now
-        sim_status = "completing"
+        # Simulation goes to completed. If report generation is triggered
+        # later, report_service will temporarily set it to "reporting".
+        sim_status = "completed"
     else:
         run_update["failed_at"] = now
         run_update["failure_reason"] = failure_reason
