@@ -422,7 +422,13 @@ This prerequisite block must complete before Step 8 begins.
 - System prompt instructs Claude to cite real evidence when `has_runtime_evidence=true`
 - Tested: 3-agent OASIS run → 14/14 report sections generated, ALL reference real agents and real metrics
 - Reports are now genuinely evidence-backed, not speculative
-- Stream adapter cleanup: Option B chosen — polling is official temporary model, adapter documented as DEFERRED, singleton commented out, no active imports
+- Stream adapter cleanup: Option B chosen — polling is official temporary model, adapter documented as DEFERRED
+- **Step 7.5E0 — Population quality hardening** applied:
+  - Agent profile validation: skip nameless entries, force country match, clamp enums
+  - Pool sourcing: platform presence filter + cross-country dedup (exclude_ids)
+  - Audience assembly: dedup safety net, coverage_pct in response
+  - SimulationResponse includes audience_id for traceability
+  - Deferred: per-segment stance assignment, private audience enforcement
 
 **Step 7.5F — Compare evidence handoff**
 1. Compare reads real reports + runtime event counts from both runs
