@@ -4,6 +4,11 @@ Raktio Adapter — Stream Adapter
 Abstraction layer over SSE transport for simulation event streaming.
 Manages concurrent listeners and event distribution.
 
+STATUS: NOT YET WIRED into api/stream.py.
+The SSE endpoint currently polls state_reader directly.
+This adapter will be wired when the OASIS runtime worker publishes
+events in real-time via stream_manager.publish().
+
 Currently supports SSE only. WebSocket support can be added later
 by implementing a WebSocket variant of the same interface.
 """

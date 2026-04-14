@@ -11,12 +11,13 @@ This module handles the pre-flight checks and initial setup.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.db.supabase_client import get_supabase
 from app.repositories import agents as agent_repo
+from app.repositories import billing as billing_repo
 from app.repositories import simulations as sim_repo
 from app.runtime.config_builder import build_run_config
 from app.services.simulation_service import estimate_credits
@@ -70,27 +71,23 @@ async def launch_simulation(
         )
 
     # 2. Credit check + reservation
-    sb = get_supabase()
     org_id = sim_repo.get_workspace_org_id(workspace_id)
     if not org_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace has no organization")
 
     credit_cost = estimate_credits(agent_count, row.get("duration_preset", "24h"))
-    available = sim_repo.get_available_credits(org_id)
-    if available is None or available < credit_cost:
+    balance = billing_repo.get_balance(org_id)
+    available = balance["available_credits"] if balance else 0
+    if available < credit_cost:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail=f"Insufficient credits: {available or 0} available, {credit_cost} required",
+            detail=f"Insufficient credits: {available} available, {credit_cost} required",
         )
 
-    # Reserve credits (deduct from available, add to reserved)
-    sb.table("credit_balances").update({
-        "available_credits": available - credit_cost,
-        "reserved_credits": credit_cost,
-    }).eq("organization_id", org_id).execute()
+    # Reserve credits
+    billing_repo.reserve_credits(org_id, credit_cost, available - credit_cost)
 
-    # Record credit reservation in ledger
-    sb.table("credit_ledger").insert({
+    billing_repo.insert_ledger_entry({
         "organization_id": org_id,
         "workspace_id": str(workspace_id),
         "event_type": "simulation_reservation",
@@ -98,7 +95,7 @@ async def launch_simulation(
         "balance_after": available - credit_cost,
         "linked_simulation_id": str(simulation_id),
         "note": f"Credit reservation for simulation launch ({agent_count} agents)",
-    }).execute()
+    })
 
     try:
         # 3. Transition to cost_check → bootstrapping
@@ -106,29 +103,33 @@ async def launch_simulation(
 
         # 4. Create simulation_runs record
         run_id = uuid.uuid4()
-        sb.table("simulation_runs").insert({
+        sim_repo.insert_run({
             "run_id": str(run_id),
             "simulation_id": str(simulation_id),
             "status": "bootstrapping",
-            "started_at": "now()",
-        }).execute()
+            "started_at": datetime.now(timezone.utc).isoformat(),
+        })
 
         # 5. Get participants and agent data for config
         participants = agent_repo.get_simulation_participants(simulation_id)
 
+        # Load all agent profiles in batches (no truncation)
         agent_ids = [p["agent_id"] for p in participants]
         agents = []
-        for aid in agent_ids[:50]:  # Limit initial batch for config
-            a = agent_repo.find_agent_by_id(uuid.UUID(aid))
-            if a:
-                agents.append(a)
+        batch_size = 100
+        for i in range(0, len(agent_ids), batch_size):
+            batch = agent_ids[i:i + batch_size]
+            for aid in batch:
+                a = agent_repo.find_agent_by_id(uuid.UUID(aid))
+                if a:
+                    agents.append(a)
 
-        # 6. Build runtime config
+        # 6. Build runtime config with all participants
         runtime_config = build_run_config(
             simulation_id=simulation_id,
             run_id=run_id,
             simulation_row=row,
-            participants=participants[:50],  # Config uses subset
+            participants=participants,
             agents=agents,
         )
 
@@ -139,7 +140,7 @@ async def launch_simulation(
         })
 
         # Update run with paths
-        sb.table("simulation_runs").update({
+        sim_repo.update_run(str(run_id), {
             "runtime_path": runtime_config["run_workspace_path"],
             "sqlite_path": runtime_config["sqlite_path"],
             "runtime_metadata_json": {
@@ -147,12 +148,12 @@ async def launch_simulation(
                 "platform_type": runtime_config["platform_type"],
                 "duration_steps": runtime_config["duration_steps"],
             },
-        }).eq("run_id", str(run_id)).execute()
+        })
 
         # Store final runtime config in simulation_configs
-        sb.table("simulation_configs").update({
+        sim_repo.update_config(simulation_id, {
             "final_runtime_config_json": runtime_config,
-        }).eq("simulation_id", str(simulation_id)).execute()
+        })
 
         return {
             "run_id": str(run_id),
@@ -168,12 +169,9 @@ async def launch_simulation(
 
     except Exception as exc:
         # Refund credits on failure
-        sb.table("credit_balances").update({
-            "available_credits": available,
-            "reserved_credits": 0,
-        }).eq("organization_id", org_id).execute()
+        billing_repo.refund_credits(org_id, available, 0)
 
-        sb.table("credit_ledger").insert({
+        billing_repo.insert_ledger_entry({
             "organization_id": org_id,
             "workspace_id": str(workspace_id),
             "event_type": "refund",
@@ -181,7 +179,7 @@ async def launch_simulation(
             "balance_after": available,
             "linked_simulation_id": str(simulation_id),
             "note": f"Refund: launch failed — {exc}",
-        }).execute()
+        })
 
         sim_repo.update(simulation_id, workspace_id, {"status": "draft"})
 

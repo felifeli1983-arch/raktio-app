@@ -15,6 +15,7 @@ The planner recommendation (from Step 3B) drives the audience composition.
 
 from __future__ import annotations
 
+import random
 import uuid
 from typing import Any
 
@@ -69,20 +70,10 @@ async def prepare_audience(
 
     try:
         # 2. Get planner recommendation
-        from app.db.supabase_client import get_supabase
-        sb = get_supabase()
-        config_result = (
-            sb.table("simulation_configs")
-            .select("planner_recommendation_json")
-            .eq("simulation_id", str(simulation_id))
-            .order("config_version", desc=True)
-            .limit(1)
-            .execute()
-        )
-
+        config = sim_repo.get_latest_config(simulation_id)
         planner_rec = {}
-        if config_result.data and config_result.data[0].get("planner_recommendation_json"):
-            planner_rec = config_result.data[0]["planner_recommendation_json"]
+        if config and config.get("planner_recommendation_json"):
+            planner_rec = config["planner_recommendation_json"]
 
         # Extract key parameters
         requested_count = row.get("agent_count_requested", 500)
@@ -198,8 +189,6 @@ async def prepare_audience(
             stances = []
             for stance, share in stance_dist.items():
                 stances.extend([stance] * max(1, round(len(all_agent_ids) * share)))
-            # Pad or trim to match
-            import random
             random.shuffle(stances)
             stances = stances[:len(all_agent_ids)]
             while len(stances) < len(all_agent_ids):
@@ -219,10 +208,11 @@ async def prepare_audience(
                     participation_rows[i:i + chunk_size]
                 )
 
-        # 7. Update simulation
+        # 7. Update simulation with audience link
         sim_repo.update(simulation_id, workspace_id, {
             "status": "draft",
             "agent_count_final": len(all_agent_ids),
+            "audience_id": audience_id,
         })
 
         return {

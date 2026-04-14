@@ -18,7 +18,8 @@ from fastapi import HTTPException, status
 
 from app.adapters.llm_adapter import llm_adapter
 from app.config import ModelRoute
-from app.db.supabase_client import get_supabase
+from app.repositories import compare as compare_repo
+from app.repositories import reports as report_repo
 from app.repositories import simulations as sim_repo
 
 
@@ -60,8 +61,6 @@ async def create_compare(
     Create a comparison between two simulations.
     Both simulations must belong to the same workspace.
     """
-    sb = get_supabase()
-
     # Validate both simulations exist in this workspace
     base = sim_repo.find_by_id(base_simulation_id, workspace_id)
     if not base:
@@ -71,15 +70,23 @@ async def create_compare(
     if not target:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target simulation not found")
 
+    # Both simulations must be completed
+    for label, sim in [("Base", base), ("Target", target)]:
+        if sim.get("status") != "completed":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"{label} simulation is in '{sim.get('status')}' status. Only completed simulations can be compared.",
+            )
+
     # Create compare record
-    compare = sb.table("compare_runs").insert({
+    compare = compare_repo.insert_compare({
         "workspace_id": str(workspace_id),
         "base_simulation_id": str(base_simulation_id),
         "target_simulation_id": str(target_simulation_id),
         "compare_type": compare_type,
         "status": "generating",
-    }).execute()
-    compare_id = compare.data[0]["compare_id"]
+    })
+    compare_id = compare["compare_id"]
 
     try:
         # Build context
@@ -106,11 +113,9 @@ async def create_compare(
 
         # Get reports if available
         for key, sim_id in [("base", base_simulation_id), ("target", target_simulation_id)]:
-            report_result = sb.table("reports").select("summary_json").eq(
-                "simulation_id", str(sim_id)
-            ).eq("status", "completed").limit(1).execute()
-            if report_result.data:
-                context[key]["report_summary"] = report_result.data[0].get("summary_json")
+            report_summary = report_repo.find_report_summary(str(sim_id))
+            if report_summary:
+                context[key]["report_summary"] = report_summary.get("summary_json")
 
         response = await llm_adapter.complete(
             route=ModelRoute.REPORT,
@@ -133,18 +138,17 @@ async def create_compare(
                 content = content.split("```")[1].split("```")[0].strip()
             summary = json.loads(content)
 
-        sb.table("compare_runs").update({
+        from datetime import datetime, timezone
+        compare_repo.update_compare(compare_id, {
             "summary_json": summary,
             "status": "completed",
-            "completed_at": "now()",
-        }).eq("compare_id", compare_id).execute()
+            "completed_at": datetime.now(timezone.utc).isoformat(),
+        })
 
         return {"compare_id": compare_id, "status": "completed", "summary": summary}
 
     except Exception as exc:
-        sb.table("compare_runs").update({
-            "status": "failed",
-        }).eq("compare_id", compare_id).execute()
+        compare_repo.update_compare(compare_id, {"status": "failed"})
 
         if isinstance(exc, HTTPException):
             raise
@@ -156,20 +160,12 @@ async def create_compare(
 
 async def get_compare(compare_id: uuid.UUID, workspace_id: uuid.UUID) -> dict[str, Any]:
     """Get a compare run by ID."""
-    sb = get_supabase()
-    result = sb.table("compare_runs").select("*").eq(
-        "compare_id", str(compare_id)
-    ).eq("workspace_id", str(workspace_id)).limit(1).execute()
-
-    if not result.data:
+    result = compare_repo.find_by_id(str(compare_id), str(workspace_id))
+    if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Compare not found")
-    return result.data[0]
+    return result
 
 
 async def list_compares(workspace_id: uuid.UUID) -> list[dict[str, Any]]:
     """List all compare runs for a workspace."""
-    sb = get_supabase()
-    result = sb.table("compare_runs").select("*").eq(
-        "workspace_id", str(workspace_id)
-    ).order("created_at", desc=True).execute()
-    return result.data or []
+    return compare_repo.list_by_workspace(str(workspace_id))

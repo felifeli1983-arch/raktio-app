@@ -22,7 +22,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.db.supabase_client import get_supabase
+from app.repositories import billing as billing_repo
 from app.repositories import simulations as sim_repo
 
 
@@ -42,11 +42,7 @@ async def pause_simulation(
         )
 
     sim_repo.update(simulation_id, workspace_id, {"status": "paused"})
-
-    sb = get_supabase()
-    sb.table("simulation_runs").update({"status": "paused"}).eq(
-        "simulation_id", str(simulation_id)
-    ).eq("status", "running").execute()
+    sim_repo.update_run_by_simulation(str(simulation_id), "running", {"status": "paused"})
 
     return {"status": "paused", "simulation_id": str(simulation_id)}
 
@@ -67,11 +63,7 @@ async def resume_simulation(
         )
 
     sim_repo.update(simulation_id, workspace_id, {"status": "running"})
-
-    sb = get_supabase()
-    sb.table("simulation_runs").update({"status": "running"}).eq(
-        "simulation_id", str(simulation_id)
-    ).eq("status", "paused").execute()
+    sim_repo.update_run_by_simulation(str(simulation_id), "paused", {"status": "running"})
 
     return {"status": "running", "simulation_id": str(simulation_id)}
 
@@ -93,33 +85,26 @@ async def cancel_simulation(
 
     sim_repo.update(simulation_id, workspace_id, {"status": "canceled"})
 
-    sb = get_supabase()
-    sb.table("simulation_runs").update({
+    from datetime import datetime, timezone
+    cancel_data = {
         "status": "canceled",
-        "failed_at": "now()",
+        "failed_at": datetime.now(timezone.utc).isoformat(),
         "failure_reason": "Canceled by user",
-    }).eq("simulation_id", str(simulation_id)).neq("status", "completed").execute()
+    }
+    for s in ("running", "paused", "bootstrapping"):
+        sim_repo.update_run_by_simulation(str(simulation_id), s, cancel_data)
 
     # Refund reserved credits
     credit_final = row.get("credit_final", 0)
     if credit_final > 0:
         org_id = sim_repo.get_workspace_org_id(workspace_id)
         if org_id:
-            balance_result = sb.table("credit_balances").select("available_credits, reserved_credits").eq(
-                "organization_id", org_id
-            ).limit(1).execute()
-
-            if balance_result.data:
-                current = balance_result.data[0]
-                new_available = current["available_credits"] + credit_final
-                new_reserved = max(0, current["reserved_credits"] - credit_final)
-
-                sb.table("credit_balances").update({
-                    "available_credits": new_available,
-                    "reserved_credits": new_reserved,
-                }).eq("organization_id", org_id).execute()
-
-                sb.table("credit_ledger").insert({
+            balance = billing_repo.get_balance(org_id)
+            if balance:
+                new_available = balance["available_credits"] + credit_final
+                new_reserved = max(0, balance["reserved_credits"] - credit_final)
+                billing_repo.refund_credits(org_id, new_available, new_reserved)
+                billing_repo.insert_ledger_entry({
                     "organization_id": org_id,
                     "workspace_id": str(workspace_id),
                     "event_type": "refund",
@@ -127,6 +112,6 @@ async def cancel_simulation(
                     "balance_after": new_available,
                     "linked_simulation_id": str(simulation_id),
                     "note": "Refund: simulation canceled by user",
-                }).execute()
+                })
 
     return {"status": "canceled", "simulation_id": str(simulation_id), "credits_refunded": credit_final}

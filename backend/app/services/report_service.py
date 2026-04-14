@@ -30,18 +30,24 @@ from fastapi import HTTPException, status
 
 from app.adapters.llm_adapter import llm_adapter
 from app.config import ModelRoute
-from app.db.supabase_client import get_supabase
+from app.repositories import reports as report_repo
 from app.repositories import simulations as sim_repo
 
 # Section generation order (progressive)
+# Section generation order (progressive).
+# Aligned with REPORTS_AND_INSIGHTS_SPEC.md sections 1-15.
 REPORT_SECTIONS = [
     "executive_summary",
+    "simulation_context",
+    "outcome_scorecard",
     "key_findings",
     "belief_shifts",
     "patient_zero",
     "segment_analysis",
     "geography_analysis",
     "platform_analysis",
+    "exposure_analysis",
+    "faction_analysis",
     "recommendations",
     "evidence",
     "confidence_limitations",
@@ -88,50 +94,43 @@ async def generate_report(
     4. Mark report as 'completed'
     5. Transition simulation to 'completed'
     """
-    sb = get_supabase()
-
     row = sim_repo.find_by_id(simulation_id, workspace_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Simulation not found")
 
-    if row.get("status") not in ("completed", "bootstrapping", "running", "completing", "reporting", "draft"):
+    if row.get("status") not in ("completed", "completing", "reporting"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Cannot generate report in '{row['status']}' status",
+            detail=f"Cannot generate report in '{row['status']}' status. Simulation must be completed first.",
         )
 
     # Find latest run
-    run_result = sb.table("simulation_runs").select("run_id").eq(
-        "simulation_id", str(simulation_id)
-    ).order("started_at", desc=True).limit(1).execute()
-
-    run_id = run_result.data[0]["run_id"] if run_result.data else None
+    run = sim_repo.get_latest_run(simulation_id)
+    run_id = run["run_id"] if run else None
 
     # Create report record
-    report = sb.table("reports").insert({
+    report = report_repo.insert_report({
         "simulation_id": str(simulation_id),
         "run_id": run_id,
         "status": "generating",
-    }).execute()
-    report_id = report.data[0]["report_id"]
+    })
+    report_id = report["report_id"]
 
     # Create section placeholders
     for section_key in REPORT_SECTIONS:
-        sb.table("report_sections").insert({
+        report_repo.insert_section({
             "report_id": report_id,
             "section_key": section_key,
             "status": "pending",
-        }).execute()
+        })
 
     # Transition to reporting
     sim_repo.update(simulation_id, workspace_id, {"status": "reporting"})
 
     # Build context for report generation
     brief_context = row.get("brief_context_json", {})
-    config_result = sb.table("simulation_configs").select("planner_recommendation_json, final_runtime_config_json").eq(
-        "simulation_id", str(simulation_id)
-    ).order("config_version", desc=True).limit(1).execute()
-    planner_rec = config_result.data[0].get("planner_recommendation_json", {}) if config_result.data else {}
+    config = sim_repo.get_latest_config(simulation_id)
+    planner_rec = config.get("planner_recommendation_json", {}) if config else {}
 
     sim_context = {
         "simulation_name": row.get("name"),
@@ -147,34 +146,33 @@ async def generate_report(
     generated_sections = {}
     for section_key in REPORT_SECTIONS:
         try:
-            sb.table("report_sections").update({"status": "generating"}).eq(
-                "report_id", report_id
-            ).eq("section_key", section_key).execute()
+            report_repo.update_section(report_id, section_key, {"status": "generating"})
 
             section_data = await _generate_section(section_key, sim_context, generated_sections)
             generated_sections[section_key] = section_data
 
-            sb.table("report_sections").update({
+            from datetime import datetime, timezone
+            report_repo.update_section(report_id, section_key, {
                 "status": "completed",
                 "content_markdown": section_data.get("content_markdown", ""),
                 "structured_json": section_data.get("structured_json", {}),
-                "generated_at": "now()",
-            }).eq("report_id", report_id).eq("section_key", section_key).execute()
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            })
 
         except Exception as exc:
-            sb.table("report_sections").update({
+            report_repo.update_section(report_id, section_key, {
                 "status": "failed",
                 "content_markdown": f"Section generation failed: {exc}",
-            }).eq("report_id", report_id).eq("section_key", section_key).execute()
-            # Continue with other sections
+            })
 
     # Build summary from executive_summary section
     exec_summary = generated_sections.get("executive_summary", {})
-    sb.table("reports").update({
+    from datetime import datetime, timezone
+    report_repo.update_report(report_id, {
         "status": "completed",
         "summary_json": exec_summary.get("structured_json"),
-        "completed_at": "now()",
-    }).eq("report_id", report_id).execute()
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+    })
 
     sim_repo.update(simulation_id, workspace_id, {"status": "completed"})
 
@@ -195,15 +193,19 @@ async def _generate_section(
 
     section_descriptions = {
         "executive_summary": "Write a concise executive summary of the simulation results. Cover the main takeaway, overall sentiment, key risks identified, and top recommendation.",
+        "simulation_context": "Summarize the simulation setup: goal, brief, agent count, duration, geography scope, platform scope, audience composition, recsys choice, and key planner assumptions.",
+        "outcome_scorecard": "Provide a compact evaluation scorecard: overall score, risk score, resonance score, controversy score, adoption potential, polarization score. Use 0-10 scale with labeled bands.",
         "key_findings": "List the 5-8 most important findings from the simulation. Each finding should be specific and evidence-backed.",
         "belief_shifts": "Analyze how audience beliefs and opinions shifted during the simulation. Identify which segments changed position and why.",
         "patient_zero": "Identify the most influential agents/amplifiers in the simulation. Who drove the narrative? Who were early adopters vs resistors?",
         "segment_analysis": "Break down results by audience segment. How did each segment react differently?",
         "geography_analysis": "Analyze geographic patterns in the simulation results. Regional variations, hotspots, and cold zones.",
         "platform_analysis": "Compare results across platforms. How did the conversation differ on each platform?",
+        "exposure_analysis": "Explain what agents saw and how that shaped outcomes. Top exposed content, exposure distribution across segments, recsys effect summary.",
+        "faction_analysis": "Explain social structure changes. Faction emergence, echo chambers, follow clusters, bridge roles, de-escalators.",
         "recommendations": "Provide 5-8 actionable recommendations based on the simulation results. Be specific and strategic.",
         "evidence": "Summarize the key evidence supporting the findings. Reference specific events, posts, or patterns.",
-        "confidence_limitations": "Assess the confidence level of this analysis. Note limitations, assumptions, and areas where more data would help.",
+        "confidence_limitations": "Assess the confidence level of this analysis. Note limitations, assumptions, and areas where more data would help. NOTE: This report is generated from simulation configuration and planner data. True evidence-backed reporting depends on real OASIS runtime execution, which is not yet wired.",
     }
 
     prompt = (
@@ -250,27 +252,13 @@ async def get_report(
     workspace_id: uuid.UUID,
 ) -> dict[str, Any]:
     """Get the latest report for a simulation with all sections."""
-    sb = get_supabase()
-
-    # Verify access
     row = sim_repo.find_by_id(simulation_id, workspace_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Simulation not found")
 
-    report_result = sb.table("reports").select("*").eq(
-        "simulation_id", str(simulation_id)
-    ).order("created_at", desc=True).limit(1).execute()
-
-    if not report_result.data:
+    report = report_repo.find_report_by_simulation(str(simulation_id))
+    if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No report found")
 
-    report = report_result.data[0]
-
-    # Get sections
-    sections_result = sb.table("report_sections").select("*").eq(
-        "report_id", report["report_id"]
-    ).order("section_key").execute()
-
-    report["sections"] = sections_result.data or []
-
+    report["sections"] = report_repo.get_sections(report["report_id"])
     return report

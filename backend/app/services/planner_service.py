@@ -18,7 +18,6 @@ from fastapi import HTTPException, status
 
 from app.adapters.llm_adapter import llm_adapter, LLMResponse
 from app.config import ModelRoute
-from app.db.supabase_client import get_supabase
 from app.repositories import simulations as sim_repo
 
 
@@ -178,26 +177,12 @@ async def plan_simulation(
         }
 
         # 5. Store in simulation_configs + update simulation
-        sb = get_supabase()
-
-        # Find existing config or create version 1
-        existing_configs = (
-            sb.table("simulation_configs")
-            .select("config_version")
-            .eq("simulation_id", str(simulation_id))
-            .order("config_version", desc=True)
-            .limit(1)
-            .execute()
-        )
-        next_version = 1
-        if existing_configs.data:
-            next_version = existing_configs.data[0]["config_version"] + 1
-
-        sb.table("simulation_configs").insert({
+        next_version = sim_repo.get_latest_config_version(simulation_id) + 1
+        sim_repo.insert_config({
             "simulation_id": str(simulation_id),
             "config_version": next_version,
             "planner_recommendation_json": recommendation,
-        }).execute()
+        })
 
         # Update simulation status
         sim_repo.update(simulation_id, workspace_id, {

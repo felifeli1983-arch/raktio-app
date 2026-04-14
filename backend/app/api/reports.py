@@ -15,7 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth.guards import WorkspaceContext, require_workspace_member
 from app.auth.permissions import can_create_simulation
-from app.db.supabase_client import get_supabase
+from app.repositories import reports as report_repo
+from app.repositories import simulations as sim_repo
 from app.services import report_service
 
 router = APIRouter()
@@ -26,23 +27,12 @@ async def list_reports(
     ctx: WorkspaceContext = Depends(require_workspace_member),
 ):
     """List all reports for simulations in this workspace."""
-    sb = get_supabase()
-
-    # Get simulation IDs for this workspace
-    sims = sb.table("simulations").select("simulation_id").eq(
-        "workspace_id", str(ctx.workspace_id)
-    ).execute()
-
-    if not sims.data:
+    sim_ids = sim_repo.get_simulation_ids_for_workspace(str(ctx.workspace_id))
+    if not sim_ids:
         return {"items": [], "total": 0}
 
-    sim_ids = [s["simulation_id"] for s in sims.data]
-
-    reports = sb.table("reports").select("*").in_(
-        "simulation_id", sim_ids
-    ).order("created_at", desc=True).execute()
-
-    return {"items": reports.data or [], "total": len(reports.data or [])}
+    reports = report_repo.list_reports_by_simulation_ids(sim_ids)
+    return {"items": reports, "total": len(reports)}
 
 
 @router.get("/{simulation_id}")

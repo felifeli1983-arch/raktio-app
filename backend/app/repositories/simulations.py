@@ -142,7 +142,8 @@ def get_org_plan_agent_limit(organization_id: str) -> Optional[int]:
 
 
 def get_available_credits(organization_id: str) -> Optional[int]:
-    """Return available_credits for an org, or None if no balance exists."""
+    """Return available_credits for an org, or None if no balance exists.
+    NOTE: For full billing operations, use repositories/billing.py instead."""
     sb = get_supabase()
     result = (
         sb.table("credit_balances")
@@ -152,3 +153,95 @@ def get_available_credits(organization_id: str) -> Optional[int]:
         .execute()
     )
     return result.data[0]["available_credits"] if result.data else None
+
+
+# ── Simulation Configs ─────────────────────────────────────────────────
+
+def get_latest_config(simulation_id: uuid.UUID) -> Optional[dict[str, Any]]:
+    """Get the latest simulation_configs row."""
+    sb = get_supabase()
+    result = (
+        sb.table("simulation_configs")
+        .select("*")
+        .eq("simulation_id", str(simulation_id))
+        .order("config_version", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return result.data[0] if result.data else None
+
+
+def get_latest_config_version(simulation_id: uuid.UUID) -> int:
+    """Get the highest config_version for a simulation, or 0."""
+    sb = get_supabase()
+    result = (
+        sb.table("simulation_configs")
+        .select("config_version")
+        .eq("simulation_id", str(simulation_id))
+        .order("config_version", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return result.data[0]["config_version"] if result.data else 0
+
+
+def insert_config(row: dict[str, Any]) -> dict[str, Any]:
+    sb = get_supabase()
+    result = sb.table("simulation_configs").insert(row).execute()
+    return result.data[0] if result.data else {}
+
+
+def update_config(simulation_id: uuid.UUID, data: dict[str, Any]) -> None:
+    """Update the latest config for a simulation."""
+    sb = get_supabase()
+    sb.table("simulation_configs").update(data).eq(
+        "simulation_id", str(simulation_id)
+    ).execute()
+
+
+# ── Simulation Runs ────────────────────────────────────────────────────
+
+def insert_run(row: dict[str, Any]) -> dict[str, Any]:
+    sb = get_supabase()
+    result = sb.table("simulation_runs").insert(row).execute()
+    return result.data[0] if result.data else {}
+
+
+def update_run(run_id: str, data: dict[str, Any]) -> None:
+    sb = get_supabase()
+    sb.table("simulation_runs").update(data).eq("run_id", run_id).execute()
+
+
+def update_run_by_simulation(
+    simulation_id: str, current_status: str, data: dict[str, Any],
+) -> None:
+    """Update runs matching simulation_id and current status."""
+    sb = get_supabase()
+    sb.table("simulation_runs").update(data).eq(
+        "simulation_id", simulation_id
+    ).eq("status", current_status).execute()
+
+
+def get_latest_run(simulation_id: uuid.UUID) -> Optional[dict[str, Any]]:
+    sb = get_supabase()
+    result = (
+        sb.table("simulation_runs")
+        .select("*")
+        .eq("simulation_id", str(simulation_id))
+        .order("started_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return result.data[0] if result.data else None
+
+
+def get_simulation_ids_for_workspace(workspace_id: str) -> list[str]:
+    """Return all simulation_ids for a workspace."""
+    sb = get_supabase()
+    result = (
+        sb.table("simulations")
+        .select("simulation_id")
+        .eq("workspace_id", workspace_id)
+        .execute()
+    )
+    return [s["simulation_id"] for s in (result.data or [])]
