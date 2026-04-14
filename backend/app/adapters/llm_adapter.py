@@ -140,13 +140,38 @@ class LLMAdapter:
     ) -> LLMResponse:
         """
         Call Anthropic API using the official anthropic Python SDK.
-        Uses prompt caching where beneficial (planning, report phases).
-        TODO: implement with anthropic SDK + prompt caching headers.
         """
-        # import anthropic
-        # client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-        # response = await client.messages.create(...)
-        raise NotImplementedError("Anthropic integration pending")
+        import anthropic
+
+        if not settings.anthropic_api_key:
+            raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+
+        client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+
+        api_kwargs: dict[str, Any] = {
+            "model": model_id,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            "messages": messages,
+        }
+        if system:
+            api_kwargs["system"] = system
+
+        response = await client.messages.create(**api_kwargs)
+
+        content_text = ""
+        for block in response.content:
+            if block.type == "text":
+                content_text += block.text
+
+        return LLMResponse(
+            content=content_text,
+            model=response.model,
+            usage={
+                "input_tokens": response.usage.input_tokens,
+                "output_tokens": response.usage.output_tokens,
+            },
+        )
 
     # ------------------------------------------------------------------
     # Private: DeepSeek — RUNTIME route

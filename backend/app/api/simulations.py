@@ -27,7 +27,7 @@ from app.schemas.simulation import (
     SimulationResponse,
     SimulationUpdate,
 )
-from app.services import simulation_service
+from app.services import brief_service, planner_service, simulation_service
 
 router = APIRouter()
 
@@ -94,6 +94,42 @@ async def update_simulation(
         simulation_id=simulation_id,
         workspace_id=ctx.workspace_id,
         data=body,
+    )
+
+
+@router.post("/{simulation_id}/understand")
+async def understand_simulation(
+    simulation_id: uuid.UUID,
+    ctx: WorkspaceContext = Depends(require_workspace_member),
+):
+    """Run AI brief understanding on a draft simulation."""
+    if not can_create_simulation(ctx.member_role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Viewers cannot trigger brief understanding",
+        )
+
+    return await brief_service.understand_brief(
+        simulation_id=simulation_id,
+        workspace_id=ctx.workspace_id,
+    )
+
+
+@router.post("/{simulation_id}/plan")
+async def plan_simulation(
+    simulation_id: uuid.UUID,
+    ctx: WorkspaceContext = Depends(require_workspace_member),
+):
+    """Generate AI planner recommendation for a draft simulation."""
+    if not can_create_simulation(ctx.member_role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Viewers cannot trigger simulation planning",
+        )
+
+    return await planner_service.plan_simulation(
+        simulation_id=simulation_id,
+        workspace_id=ctx.workspace_id,
     )
 
 
