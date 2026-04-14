@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 2 — Supabase Service-Role Client + Simulations CRUD API**
+> Last completed step: **Step 3 — Brief Understanding + Planner (Intelligence Layer)**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git (branch `main`)
 
 ---
@@ -27,18 +27,37 @@
   - `backend/app/db/supabase_client.py` — singleton service_role client via `supabase-py`
   - `require_workspace_member()` now does real DB lookup on `workspace_memberships`
   - `backend/app/schemas/simulation.py` — Pydantic models: `SimulationCreate`, `SimulationUpdate`, `SimulationResponse`, `SimulationListResponse`
-  - `backend/app/services/simulation_service.py` — full CRUD + credit estimation + plan agent limit check + credit balance check
-  - `backend/app/api/simulations.py` — 5 endpoints: POST, GET list, GET single, PATCH, DELETE with role-based access
+  - `backend/app/services/simulation_service.py` — full CRUD via repository layer + credit estimation + plan agent limit check
+  - `backend/app/api/simulations.py` — 5 CRUD endpoints + 2 intelligence endpoints with role-based access
   - Integration tested end-to-end: user creation → org → workspace → membership → credits → JWT → all CRUD ops → cleanup
+- **Audit fixes applied** (between Step 2 and Step 3):
+  - Migration `002_add_user_email_and_plan_pricing.sql` — adds `email` to `public.users`, pricing fields to `plans`, updates trigger
+  - Refactored `simulation_service.py` to use `repositories/simulations.py` (no direct DB calls)
+  - Extracted role checks into `auth/permissions.py` with reusable permission functions
+  - Fixed delete query to filter by workspace_id (defense-in-depth)
+  - Removed inline imports from API routes
+  - Step 1 and Step 2 both passed re-audit after fixes
+- **Step 3A: Brief Understanding** — implemented and structurally tested:
+  - `_call_anthropic()` implemented in `llm_adapter.py` using `anthropic` SDK (AsyncAnthropic)
+  - `brief_service.py` — calls Claude Sonnet (PLANNING), extracts structured JSON (topic, entities, audience segments, geography, risks)
+  - `POST /api/simulations/{id}/understand` — triggers brief understanding, stores in `brief_context_json`
+  - Status transitions: `draft` → `understanding` → `draft` (with context). Reverts on failure.
+  - Structural tests pass: routing, validation (no brief → 422), permissions (viewer → 403), error recovery
+  - **BLOCKER**: Full LLM test requires `ANTHROPIC_API_KEY` in `.env` (currently empty)
+- **Step 3B: Planner** — implemented and structurally tested:
+  - `planner_service.py` — calls Claude Sonnet (PLANNING) with brief context + user params, generates simulation config recommendation
+  - `POST /api/simulations/{id}/plan` — triggers planner, stores in `simulation_configs.planner_recommendation_json`
+  - `planner_status` transitions: `pending` → `running` → `ready` (or `failed`). Reverts on failure.
+  - Structural tests pass: prerequisite check (no understanding → 422), permissions (viewer → 403), error recovery
+  - **BLOCKER**: Full LLM test requires `ANTHROPIC_API_KEY` in `.env`
 
 ### Partially Done (by design — completed in later steps)
 
 - `require_admin()` — delegates to `require_user()` (needs `platform_admin` role check from DB)
-- `llm_adapter.py` — `_call_anthropic()` and `_call_deepseek()` raise `NotImplementedError` (skeleton only)
+- `_call_deepseek()` in `llm_adapter.py` — raises `NotImplementedError` (Step 5: OASIS runtime)
+- `stream_complete()` in `llm_adapter.py` — not yet implemented (Step 6: streaming)
 
 ### Not Started Yet
-
-- Step 3: Brief ingestion + Intelligence Layer (Claude Sonnet planning)
 - Step 4: Audience sourcing + agent population
 - Step 5: OASIS runtime bridge
 - Step 6: Live streaming (SSE)
@@ -115,11 +134,16 @@ These decisions are **confirmed and must not be changed** without explicit user 
 | `backend/migrations/001_initial_schema.sql` | **IMPLEMENTED** — 12 tables, RLS, triggers, helper functions, plan seeds. Applied to live Supabase. |
 | `backend/app/config.py` | **IMPLEMENTED** — `Settings` (pydantic-settings), `ModelRoute` enum, `MODEL_ROUTING` dict |
 | `backend/app/auth/guards.py` | **IMPLEMENTED** — `AuthUser`, `WorkspaceContext`, `_decode_supabase_jwt()`, `require_user`, `require_admin`, `require_workspace_member` (real DB lookup), `get_optional_user` |
+| `backend/app/auth/permissions.py` | **IMPLEMENTED** — reusable role-check functions: `can_create_simulation()`, `can_delete_simulation()`, `can_view_billing()`, etc. |
 | `backend/app/db/supabase_client.py` | **IMPLEMENTED** — singleton `get_supabase()` using service_role key, `@lru_cache` |
+| `backend/app/repositories/simulations.py` | **IMPLEMENTED** — `insert`, `find_by_id`, `list_by_workspace`, `update`, `delete`, plus helper lookups for org/plan/credits |
 | `backend/app/schemas/simulation.py` | **IMPLEMENTED** — `SimulationCreate`, `SimulationUpdate`, `SimulationResponse`, `SimulationListResponse`, constrained Literal types |
-| `backend/app/services/simulation_service.py` | **IMPLEMENTED** — `create_simulation`, `list_simulations`, `get_simulation`, `update_simulation`, `delete_simulation`, `estimate_credits`, plan limit + credit balance checks |
-| `backend/app/api/simulations.py` | **IMPLEMENTED** — 5 endpoints (POST, GET list, GET single, PATCH, DELETE) with role-based auth guards |
-| `backend/app/adapters/llm_adapter.py` | **SKELETON** — `LLMAdapter` class with `complete()` dispatching to `_call_anthropic`/`_call_deepseek` (both `NotImplementedError`) |
+| `backend/app/services/simulation_service.py` | **IMPLEMENTED** — CRUD via repository layer + credit estimation + plan limit + balance checks |
+| `backend/app/services/brief_service.py` | **IMPLEMENTED** — `understand_brief()`, Claude Sonnet PLANNING call, JSON extraction, status transitions |
+| `backend/app/services/planner_service.py` | **IMPLEMENTED** — `plan_simulation()`, Claude Sonnet PLANNING call, stores in simulation_configs, planner_status lifecycle |
+| `backend/app/api/simulations.py` | **IMPLEMENTED** — 7 endpoints (5 CRUD + understand + plan) with role-based auth via permissions module |
+| `backend/app/adapters/llm_adapter.py` | **IMPLEMENTED** — `_call_anthropic()` via anthropic SDK. `_call_deepseek()` still `NotImplementedError`. |
+| `backend/migrations/002_add_user_email_and_plan_pricing.sql` | **IMPLEMENTED** — adds email to users, pricing fields to plans, updates trigger. Applied to live Supabase. |
 | `backend/app/main.py` | **SKELETON** — FastAPI app with 10 routers registered, health endpoint |
 | `backend/requirements.txt` | Full dependency list |
 | `backend/Dockerfile.dev` | Dev Dockerfile (Python 3.11-slim, uvicorn --reload) |
@@ -274,29 +298,29 @@ raktio-app/
 
 ## 5. Next Exact Implementation Step
 
-### Step 3: Brief Ingestion + Intelligence Layer (Claude Sonnet Planning)
+### Step 4: Audience Sourcing + Agent Population
 
-Execute in this order:
+Split into micro-steps:
 
-1. **Implement `backend/app/adapters/llm_adapter.py`** — complete `_call_anthropic()` using the `anthropic` Python SDK. Implement `complete(route, messages, system)` for `PLANNING` and `REPORT` routes. `_call_deepseek()` stays `NotImplementedError` for now (runtime step).
+**Step 4A — Audience tables migration**
+1. Create `003_audiences_and_participation.sql` — add tables: `audiences`, `audience_memberships`, `simulation_participations`
+2. Apply migration to live Supabase
+3. Test table creation
 
-2. **Implement `backend/app/services/brief_service.py`** — takes `brief_text` from a simulation, calls Claude Sonnet (PLANNING route) to extract:
-   - Brief understanding / interpretation
-   - Ontology extraction (key topics, entities, relationships)
-   - Store result in `simulations.brief_context_json`
+**Step 4B — Agent generation service**
+1. Implement `backend/app/services/agent_service.py` — generate synthetic agents via Claude Sonnet (PLANNING route) based on planner's audience_composition
+2. Implement `backend/app/repositories/agents.py` — CRUD for agents table
+3. Test agent generation and persistence
 
-3. **Implement `backend/app/services/planner_service.py`** — calls Claude Sonnet (PLANNING route) to generate:
-   - Audience recommendation (demographics, stance distribution, geography)
-   - Platform/geography/recsys config recommendations
-   - Store result in `simulation_configs.planner_recommendation_json`
-   - Update `simulations.planner_status` to `ready`
+**Step 4C — Audience assembly**
+1. Implement `backend/app/services/audience_service.py` — selects agents from global pool + generates new ones if needed
+2. Add `POST /api/simulations/{id}/prepare-audience` endpoint
+3. Status transition: `draft` → `audience_preparing` → `draft` (with audience ready)
+4. Test end-to-end
 
-4. **Wire brief + planner into the simulation lifecycle**:
-   - Add a `POST /api/simulations/{id}/understand` endpoint that triggers brief understanding
-   - Add a `POST /api/simulations/{id}/plan` endpoint that triggers the planner
-   - These transition simulation status: `draft` → `understanding` → `planning` → (planner_status=ready)
-
-5. **Test the full flow**: create simulation → submit brief → understand → plan → verify stored results.
+**Step 4D — Audience API endpoints**
+1. Implement `backend/app/api/audiences.py` — CRUD for saved audiences
+2. Test endpoints
 
 ---
 
@@ -307,6 +331,7 @@ Execute in this order:
 | **GitHub token exposed** | Token `ghp_hRJ1...` was pasted in chat. Must be revoked from GitHub Settings → Developer settings → PAT. |
 | **DB password exposed** | `@Eleonora2021@` was shared in chat. Consider rotating from Supabase Dashboard → Settings → Database. |
 | **Service role key exposed** | Shared in chat. Consider rotating from Supabase Dashboard → Settings → API (regenerate). |
+| **ANTHROPIC_API_KEY not set** | `.env` has `ANTHROPIC_API_KEY=` (empty). Step 3 LLM calls (understand, plan) will fail with 502 until this is configured. Structural tests pass without it. |
 | **npm install not run** | `frontend/package.json` exists but `npm install` has never been executed (no `node_modules/`, no `package-lock.json`). |
 | **pip install not run** | `backend/requirements.txt` exists but deps not installed in a venv. |
 | **No git hooks / CI** | No linting, formatting, or CI pipeline set up yet. |
@@ -329,7 +354,7 @@ Execute in this order:
 
 1. Read this handoff file
 2. Confirm understanding of frozen decisions
-3. Execute **Step 2** as described in section 5 above
+3. Execute **Step 4** as described in section 5 above (micro-step process)
 4. Do NOT re-architect, re-discuss, or recreate the skeleton
 
 ### What must NOT be reinvented or changed
@@ -340,6 +365,8 @@ Execute in this order:
 - The auth flow (Supabase Auth + JWT validation) is complete — build on top of it
 - The 18 Docs files are the source of truth for all product decisions
 - Login and signup pages are working — do not touch unless there is a bug
+- Brief and planner services are implemented — they work structurally, full LLM test needs API key
+- The repository pattern is established — all new services must use repositories, not direct DB calls
 
 ### Prompt to start the next chat
 
