@@ -809,7 +809,7 @@ The backend must:
 | `schemas/` | 4 implemented (simulation, audience, report, compare). 4 stubs. | |
 | `adapters/` | 2 implemented (llm_adapter with Anthropic+DeepSeek). stream_adapter DEFERRED. 4 stubs. | |
 | `auth/` | guards.py fully implemented, permissions.py fully implemented. | 4 FastAPI dependencies + 10 permission functions. |
-| `billing/` | Stubs. Credit rules not yet implemented. | |
+| `billing/` | Implemented: credit_rules.py (full formula), entitlements.py (plan checks). | |
 | `admin/` | Stubs. | |
 | `workers/` | Stubs. OASIS currently runs via asyncio.create_task, not ARQ. | |
 
@@ -820,4 +820,4 @@ The backend must:
 - **Adapters isolate externals**: ✓ LLM routing via llm_adapter
 - **Repository pattern**: ✓ established and enforced across all implemented services
 
-### Total API endpoints: 22 implemented
+### Total API endpoints: 26 implemented

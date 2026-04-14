@@ -268,27 +268,15 @@
 - **Description**: `_settle_credits()` in `oasis_worker.py` calculates actual cost from real execution, settles reserved→final, creates `simulation_finalization` ledger entry, handles partial refund.
 - **Status**: DONE (Step 7.5G)
 
-### BIL-02: Full credit cost formula
+### BIL-02: Full credit cost formula ✅ DONE
 - **Area**: Billing
-- **Description**: Current formula: `agents x duration_multiplier`. Missing: platform_count factor, geography_scope factor, add-on modular pricing. Doc specifies: audience_size (strong) + platform_count (medium-strong) + duration (medium) + geography (light-medium) + add-ons (modular).
-- **Why deferred**: Simplified formula works for MVP. Full formula is a Step 8 task.
-- **Dependencies**: None
-- **Priority**: MEDIUM
-- **Type**: Enhancement
-- **Related files**: `services/simulation_service.py`, `billing/credit_rules.py` (stub), `PRICING_AND_CREDITS.md`
-- **Recommended step**: Step 8
-- **Status**: DEFERRED
+- **Description**: Full formula implemented: `agents × duration × platform × geography`. Platform: +20% per extra platform. Geography: +5% per extra country. Add-on pricing remains deferred.
+- **Status**: DONE (Step 8)
 
 ### BIL-03: Billing service + API
 - **Area**: Billing
 - **Description**: `services/billing_service.py` and `api/billing.py` are stubs. No plan management, pack purchases, usage history, or upgrade prompts.
-- **Why deferred**: Was blocked by Step 7.5G (now complete).
-- **Dependencies**: BIL-01 (done)
-- **Priority**: HIGH
-- **Type**: Missing feature
-- **Related files**: `services/billing_service.py` (stub), `api/billing.py` (stub), `PRICING_AND_CREDITS.md`
-- **Recommended step**: Step 8
-- **Status**: READY
+- **Status**: DONE (Step 8) — balance, usage, estimate, plans endpoints implemented. Subscriptions and pack purchases remain deferred (BIL-04, BIL-05).
 
 ### BIL-04: Subscriptions table
 - **Area**: Billing

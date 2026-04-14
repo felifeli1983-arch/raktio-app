@@ -707,3 +707,20 @@ The commercial system must support:
 - Settles reserved→0, adjusts available for any refund
 - Updates `simulations.credit_final` to actual cost
 - **Tested**: 2-agent 2-step full completion → reserved=1, actual=1, refund=0
+
+### Full credit formula (updated 2026-04-14, Step 8)
+- **Implemented**: `billing/credit_rules.py`
+- Formula: `agent_count × duration_multiplier × platform_multiplier × geography_multiplier`
+- Duration: 6h=0.5, 12h=0.75, 24h=1.0, 48h=1.8, 72h=2.5
+- Platform: +20% per additional platform beyond the first
+- Geography: +5% per additional country beyond the first
+- Examples: 1000a/24h/1p/1c=1000, 1000a/24h/3p=1400, 2000a/48h/2p/2c=4536
+- Simulation creation and update both use the full formula
+- Add-on modular pricing: NOT YET (deferred)
+
+### Billing API (updated 2026-04-14, Step 8)
+- GET /api/billing/balance — credit balance + plan info
+- GET /api/billing/usage — ledger entries (usage history)
+- POST /api/billing/estimate — estimate cost before launch
+- GET /api/billing/plans — list all plans (public)
+- NOT YET: pack purchases, plan changes, subscription management

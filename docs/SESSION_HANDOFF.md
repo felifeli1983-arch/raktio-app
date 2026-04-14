@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 7.5G — Credit Settlement (Step 7.5 COMPLETE, audited + stress tested)**
+> Last completed step: **Step 8 — Billing / Credits**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -41,7 +41,7 @@
 | **7.5E1** | Evidence precision hardening | **PASS** |
 | 7.5F | Compare evidence handoff | **PASS** |
 | 7.5G | Credit settlement | **PASS** |
-| 8 | Billing / Credits | **UNBLOCKED** — ready to start |
+| 8 | Billing / Credits | **PASS** |
 | 9 | Admin Panel API | NOT STARTED |
 | 10 | Team & Governance API | NOT STARTED |
 | 11 | Frontend Pages | NOT STARTED |
