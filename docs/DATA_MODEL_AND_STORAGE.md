@@ -869,3 +869,10 @@ The minimum persistent schema should cover:
 - **Supabase/Postgres**: 18 tables live with RLS
 - **Object storage**: not yet implemented
 - **Semantic/search index**: not yet implemented (pgvector extension enabled but unused)
+
+### Additional table (Step 8D, 2026-04-14)
+| Domain | Table | Status |
+|--------|-------|--------|
+| Analytics | llm_usage_log | Live (migration 006). Append-only log of all LLM calls with token counts, cost estimates, context IDs. RLS restricted to billing/org/platform admins. |
+
+**Total tables live: 19**

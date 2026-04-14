@@ -299,6 +299,27 @@
 - **Recommended step**: Step 8
 - **Status**: DEFERRED
 
+### BIL-05b: LLM usage analytics API
+- **Area**: Billing / Analytics
+- **Description**: `llm_usage_log` table exists and is populated on every LLM call. Repository has `get_usage_summary_by_org()`. But there is no API endpoint exposing usage analytics to admins or billing users. No dashboard data for cost analysis.
+- **Why deferred**: Core logging infrastructure is in place. API exposure is a refinement.
+- **Dependencies**: None (data exists)
+- **Priority**: LOW
+- **Type**: Missing feature
+- **Related files**: `repositories/llm_usage.py`, `api/billing.py`
+- **Recommended step**: Admin panel or billing refinement
+- **Status**: DEFERRED
+
+### BIL-05c: Cost-based pricing recommendations
+- **Area**: Billing / Analytics
+- **Description**: The `llm_usage_log` data could power automatic pricing recommendations (e.g., "this simulation cost $X in LLM calls, the credit charge was Y credits — suggest adjusting the formula"). This is explicitly designed as a future capability — the current system only measures, never auto-modifies.
+- **Why deferred**: Requires significant data accumulation and product decision-making.
+- **Dependencies**: BIL-05b
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Recommended step**: Product analytics phase
+- **Status**: DEFERRED
+
 ### BIL-06: Add-on modular pricing
 - **Area**: Billing
 - **Description**: The credit formula currently covers agents × duration × platform × geography. PRICING_AND_CREDITS.md specifies add-on modular pricing as a separate cost factor (e.g., report depth, interview access, extended memory). No add-on pricing logic exists.

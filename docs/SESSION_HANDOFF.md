@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 8 — Billing / Credits**
+> Last completed step: **Step 8D — Cost & Token Intelligence Layer**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -41,7 +41,8 @@
 | **7.5E1** | Evidence precision hardening | **PASS** |
 | 7.5F | Compare evidence handoff | **PASS** |
 | 7.5G | Credit settlement | **PASS** |
-| 8 | Billing / Credits | **PASS** |
+| 8A-C | Billing / Credits (formula, service, API) | **PASS** |
+| 8D | Cost & Token Intelligence Layer | **PASS** |
 | 9 | Admin Panel API | NOT STARTED |
 | 10 | Team & Governance API | NOT STARTED |
 | 11 | Frontend Pages | NOT STARTED |
