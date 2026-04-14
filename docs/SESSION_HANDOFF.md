@@ -232,6 +232,7 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 | No subscription/plan change/payment API | Requires BIL-04 to BIL-08 | Post-launch |
 | Group actions (5) not enabled in OASIS | Group simulation features deferred | Later step |
 | No report_chat tables | Interactive report chat deferred | Later step |
+| LLM usage logs missing org_id, user_id, run_id, agent_id | org/user need API-layer threading; run_id needs camel-ai instrumentation | BIL-05e |
 | ~80 frontend files are stubs | Frontend implementation step | Step 11 |
 
 ---

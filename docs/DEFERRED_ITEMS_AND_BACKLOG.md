@@ -315,6 +315,21 @@
 - **Description**: All 5 LLM-calling services now pass `log_context` with simulation_id, workspace_id, service_module, call_purpose, and context-specific IDs (report_id, compare_id).
 - **Status**: DONE (Step 8E)
 
+### BIL-05e: LLM usage log — remaining attribution gaps
+- **Area**: Billing / Analytics
+- **Description**: Four context fields are not yet populated in `llm_usage_log`:
+  1. **organization_id**: Services have workspace_id but don't look up the org. Requires `sim_repo.get_workspace_org_id()` call in each service or passing org_id from the API layer.
+  2. **user_id**: The calling user's ID is available in the API layer (`ctx.user.user_id`) but not passed down through services to `log_context`. Requires threading user_id through service function signatures.
+  3. **run_id**: OASIS agent inference during `env.step()` goes through camel-ai's own LLM client, not through our `llm_adapter`. These calls are invisible to our logging. Capturing them would require instrumenting camel-ai or wrapping the model backend.
+  4. **agent_id**: Agent generation creates multiple agents per LLM call, so no single agent_id applies. For report/compare calls, agent_id is not applicable.
+- **Why deferred**: Core attribution (simulation_id + workspace_id + service_module + call_purpose) is sufficient for per-simulation cost analysis. The remaining fields add precision but require API-to-service threading (org_id, user_id) or camel-ai instrumentation (run_id).
+- **Dependencies**: None for org_id/user_id. Camel-ai modification for run_id.
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Related files**: `adapters/llm_adapter.py`, all services, `runtime/oasis_worker.py`
+- **Recommended step**: Service refinement pass
+- **Status**: DEFERRED
+
 ### BIL-05c: Cost-based pricing recommendations
 - **Area**: Billing / Analytics
 - **Description**: The `llm_usage_log` data could power automatic pricing recommendations (e.g., "this simulation cost $X in LLM calls, the credit charge was Y credits — suggest adjusting the formula"). This is explicitly designed as a future capability — the current system only measures, never auto-modifies.
