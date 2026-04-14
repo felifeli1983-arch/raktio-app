@@ -193,7 +193,16 @@ Wire real runtime evidence from both simulations' SQLite DBs into compare_servic
 
 ---
 
-## 7. Structural Limitations (Intentional)
+## 7. Deferred Items
+
+All deferred, partial, blocked, and missing items are centralized in:
+**[docs/DEFERRED_ITEMS_AND_BACKLOG.md](DEFERRED_ITEMS_AND_BACKLOG.md)**
+
+That file contains 33 tracked items across 8 areas with priority, status, dependencies, and recommended step for each.
+
+---
+
+## 8. Structural Limitations (Intentional)
 
 | Limitation | Reason | When to fix |
 |-----------|--------|-------------|
@@ -214,7 +223,7 @@ Wire real runtime evidence from both simulations' SQLite DBs into compare_servic
 
 ---
 
-## 8. Frozen Decisions
+## 9. Frozen Decisions
 
 | Decision | Detail |
 |----------|--------|
@@ -231,7 +240,7 @@ Wire real runtime evidence from both simulations' SQLite DBs into compare_servic
 
 ---
 
-## 9. Restart Instructions
+## 10. Restart Instructions
 
 ### Read first
 1. This file (`Docs/SESSION_HANDOFF.md`)
@@ -252,7 +261,7 @@ Wire real runtime evidence from both simulations' SQLite DBs into compare_servic
 
 ---
 
-## 10. Documentation Sync Log (2026-04-14)
+## 11. Documentation Sync Log (2026-04-14)
 
 | Doc | Updated | Changes |
 |-----|---------|---------|
