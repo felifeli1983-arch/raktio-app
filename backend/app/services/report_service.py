@@ -299,6 +299,62 @@ async def _generate_section(
                 act_str = ", ".join(f"{k}: {v}" for k, v in acts.items())
                 prompt += f"- **{agent}**: {act_str}\n"
             prompt += "\n"
+
+        # Belief shift indicators
+        belief = evidence.get("belief_indicators", {})
+        if belief:
+            prompt += "### Belief/Stance Indicators (per agent)\n"
+            for agent, ind in belief.items():
+                stance = ind.get("behavioral_stance", "unknown")
+                ratio = ind.get("reaction_ratio")
+                ratio_str = f", reaction ratio: {ratio}" if ratio is not None else ""
+                targets = ind.get("engagement_targets", {})
+                target_str = f", engages with: {', '.join(targets.keys())}" if targets else ""
+                prompt += f"- **{agent}**: {stance}{ratio_str}{target_str}\n"
+            prompt += "\n"
+
+        # Exposure history
+        exp_hist = evidence.get("exposure_history", {})
+        per_agent_exp = exp_hist.get("per_agent", {})
+        per_post_exp = exp_hist.get("per_post", {})
+        if per_agent_exp:
+            prompt += "### Exposure History (what each agent saw)\n"
+            for agent, data in per_agent_exp.items():
+                prompt += (
+                    f"- **{agent}**: saw {data.get('unique_posts', 0)} unique posts, "
+                    f"{data.get('exposure_count', 0)} total exposures\n"
+                )
+            prompt += "\n"
+        if per_post_exp:
+            prompt += "### Post Reach\n"
+            for pid, data in per_post_exp.items():
+                agents = data.get("exposed_to", [])
+                prompt += f"- Post {pid}: reached {len(agents)} agents ({', '.join(agents)})\n"
+            prompt += "\n"
+
+        # Interaction matrix
+        interactions = evidence.get("interaction_matrix", {})
+        comment_int = interactions.get("comment_interactions", [])
+        like_int = interactions.get("like_interactions", [])
+        follow_edges = interactions.get("follow_edges", [])
+        mute_edges = interactions.get("mute_edges", [])
+        if comment_int or like_int:
+            prompt += "### Interaction Matrix\n"
+            for i in comment_int:
+                prompt += f"- {i['from']} commented on {i['to']}'s posts: {i['count']}x\n"
+            for i in like_int:
+                prompt += f"- {i['from']} liked {i['to']}'s posts: {i['count']}x\n"
+            prompt += "\n"
+        if follow_edges:
+            prompt += "### Follow Relationships\n"
+            for f in follow_edges:
+                prompt += f"- {f['follower']} → {f['followee']}\n"
+            prompt += "\n"
+        if mute_edges:
+            prompt += "### Mute Relationships\n"
+            for m in mute_edges:
+                prompt += f"- {m['muter']} muted {m['mutee']}\n"
+            prompt += "\n"
     else:
         prompt += (
             "## Note\n"
