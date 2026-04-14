@@ -388,6 +388,9 @@ This prerequisite block must complete before Step 8 begins.
 - Agents produced culturally coherent Italian food discourse
 - Launcher dispatches worker inline (`run_oasis=True`); production should use ARQ
 - **OASIS simulations now actually run. This is the most significant milestone in the project.**
+- Post-fixes applied:
+  - Status lifecycle: sim goes `draft→cost_check→bootstrapping→running→completing→completed` (or `failed`). Run mirrors `bootstrapping→running→completed`. `completing` is a real transitional state between last step and env.close(). `reporting` set by report_service only.
+  - Action set expanded from 11 to 21: full social action grammar minus internal mechanics (REFRESH/SIGNUP/EXIT/UPDATE_REC_TABLE), special actions (INTERVIEW/PURCHASE_PRODUCT), and deferred group actions (5). Documented and categorized in oasis_worker.py.
 
 **Step 7.5C — Verified event bridge**
 1. Update event_bridge.py with real OASIS SQLite table names/columns
