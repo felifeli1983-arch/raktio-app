@@ -352,29 +352,59 @@ raktio-app/
 
 ## 5. Next Exact Implementation Step
 
-### Step 8: Billing / Credits
+### PRIORITY DECISION (2026-04-14)
 
-Split into micro-steps:
+**Step 8 (Billing) is BLOCKED. Step 7.5 must come first.**
 
-**Step 8A — Billing service**
-1. Implement `billing_service.py` — plan entitlements, credit consumption, pack purchases
-2. Credit cost calculation with full formula (agents × duration × platform × geography)
-3. Implement `billing/credit_rules.py` — actual cost rules from PRICING_AND_CREDITS.md
+Rationale: the product's core value — real social simulation — is not yet functional.
+Reports, compare, streaming, and billing finalization all depend on real OASIS runtime
+evidence that does not exist yet. Building billing on speculative execution would
+require rework. Real OASIS execution is the single highest-priority work item.
 
-**Step 8B — Billing API endpoints**
-1. Implement `api/billing.py` — GET balance, GET usage history, POST buy credits
-2. Implement `schemas/billing.py` — Pydantic models
-3. Test endpoints
+### Step 7.5 — OASIS Runtime Execution + Evidence Pipeline
 
-**Step 8C — Credit finalization on simulation completion**
-1. Wire credit finalization into simulation completion flow
-2. Update credit_ledger with `simulation_finalization` event
-3. Settle reserved → deducted credits
+This prerequisite block must complete before Step 8 begins.
 
-### After Step 8, remaining steps:
+**Step 7.5A — Verify OASIS environment**
+1. Confirm oasis-main/ is importable, install deps
+2. Run OASIS quick_start example to verify it works
+3. Inspect real OASIS SQLite schema, compare with event_bridge assumptions
+
+**Step 7.5B — OASIS runtime worker**
+1. Implement runtime/oasis_worker.py — actual env.step() loop
+2. Create SocialAgent instances from runtime_config agent_configs
+3. Build AgentGraph, call oasis.make(), env.reset(), env.step() loop, env.close()
+4. Update simulation_runs.simulated_time_completed during execution
+5. Update simulation status: running → completing → completed (or failed)
+
+**Step 7.5C — Verified event bridge**
+1. Update event_bridge.py with real OASIS SQLite table names/columns
+2. Implement real event normalization from actual tables
+3. Test: run small sim → read events → verify they're real
+
+**Step 7.5D — Live streaming**
+1. Worker publishes status updates during env.step()
+2. state_reader returns real data from live SQLite
+3. SSE stream delivers real events during a live run
+
+**Step 7.5E — Report evidence handoff**
+1. Gather real runtime evidence after completion (posts, actions, agent counts)
+2. Feed evidence into report_service._generate_section() as sim_context
+3. Reports cite real events and metrics
+
+**Step 7.5F — Compare evidence handoff**
+1. Compare reads real reports + runtime event counts from both runs
+
+**Step 7.5G — Credit settlement**
+1. Calculate actual cost from real execution
+2. Settle reserved → final in credit_balances
+3. Insert simulation_finalization ledger entry
+
+### After Step 7.5, remaining roadmap:
+- Step 8: Billing / Credits
 - Step 9: Admin panel API
 - Step 10: Team & Governance API
-- Step 11: Frontend page implementations (Overview, New Sim, Canvas, etc.)
+- Step 11: Frontend page implementations
 - Step 12: Integration testing & deployment prep
 
 ---
