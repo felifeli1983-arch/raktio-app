@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 3 — Brief Understanding + Planner (Intelligence Layer)**
+> Last completed step: **Step 4 — Audience Sourcing + Agent Population**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git (branch `main`)
 
 ---
@@ -57,8 +57,18 @@
 - `_call_deepseek()` in `llm_adapter.py` — raises `NotImplementedError` (Step 5: OASIS runtime)
 - `stream_complete()` in `llm_adapter.py` — not yet implemented (Step 6: streaming)
 
+- **Step 4: Audience Sourcing + Agent Population** — implemented and tested:
+  - Migration `003_audiences_and_participation.sql` — 3 new tables (audiences, audience_memberships, simulation_participations) with RLS. Applied to live Supabase (15 tables total).
+  - `repositories/agents.py` — full CRUD for agents, audiences, memberships, participations
+  - `agent_service.py` — LLM-based agent generation via Claude Sonnet PLANNING, username generation with uniqueness
+  - `audience_service.py` — sources from global pool + generates gaps, creates audience + memberships + participations
+  - `POST /api/simulations/{id}/prepare-audience` — endpoint with status transitions, graceful fallback when LLM unavailable
+  - `audiences.py` API — GET list, GET single, DELETE (soft archive) with role-based access
+  - `schemas/audience.py` — Pydantic models
+  - Structural tests pass: prerequisite checks (422), permissions (403), error recovery, CRUD operations
+  - **Note**: `DEEPSEEK_API_KEY` now configured in `.env`. `ANTHROPIC_API_KEY` still empty.
+
 ### Not Started Yet
-- Step 4: Audience sourcing + agent population
 - Step 5: OASIS runtime bridge
 - Step 6: Live streaming (SSE)
 - Step 7: Reports + Compare
@@ -144,6 +154,12 @@ These decisions are **confirmed and must not be changed** without explicit user 
 | `backend/app/api/simulations.py` | **IMPLEMENTED** — 7 endpoints (5 CRUD + understand + plan) with role-based auth via permissions module |
 | `backend/app/adapters/llm_adapter.py` | **IMPLEMENTED** — `_call_anthropic()` via anthropic SDK. `_call_deepseek()` still `NotImplementedError`. |
 | `backend/migrations/002_add_user_email_and_plan_pricing.sql` | **IMPLEMENTED** — adds email to users, pricing fields to plans, updates trigger. Applied to live Supabase. |
+| `backend/migrations/003_audiences_and_participation.sql` | **IMPLEMENTED** — audiences, audience_memberships, simulation_participations + RLS. Applied to live Supabase. |
+| `backend/app/repositories/agents.py` | **IMPLEMENTED** — CRUD for agents, audiences, memberships, participations |
+| `backend/app/services/agent_service.py` | **IMPLEMENTED** — LLM-based agent generation, username generation |
+| `backend/app/services/audience_service.py` | **IMPLEMENTED** — audience assembly from pool + generation, create audience + memberships + participations |
+| `backend/app/api/audiences.py` | **IMPLEMENTED** — GET list, GET single, DELETE (archive) |
+| `backend/app/schemas/audience.py` | **IMPLEMENTED** — `AudienceResponse`, `AudienceListResponse` |
 | `backend/app/main.py` | **SKELETON** — FastAPI app with 10 routers registered, health endpoint |
 | `backend/requirements.txt` | Full dependency list |
 | `backend/Dockerfile.dev` | Dev Dockerfile (Python 3.11-slim, uvicorn --reload) |
@@ -298,29 +314,29 @@ raktio-app/
 
 ## 5. Next Exact Implementation Step
 
-### Step 4: Audience Sourcing + Agent Population
+### Step 5: OASIS Runtime Bridge
 
 Split into micro-steps:
 
-**Step 4A — Audience tables migration**
-1. Create `003_audiences_and_participation.sql` — add tables: `audiences`, `audience_memberships`, `simulation_participations`
-2. Apply migration to live Supabase
-3. Test table creation
+**Step 5A — DeepSeek adapter**
+1. Implement `_call_deepseek()` in `llm_adapter.py` using OpenAI-compatible client
+2. Test with real `DEEPSEEK_API_KEY` (now configured)
 
-**Step 4B — Agent generation service**
-1. Implement `backend/app/services/agent_service.py` — generate synthetic agents via Claude Sonnet (PLANNING route) based on planner's audience_composition
-2. Implement `backend/app/repositories/agents.py` — CRUD for agents table
-3. Test agent generation and persistence
+**Step 5B — Runtime config builder**
+1. Implement `runtime/config_builder.py` — translates product-level simulation config into OASIS-executable config
+2. Creates run workspace directory, SQLite init
 
-**Step 4C — Audience assembly**
-1. Implement `backend/app/services/audience_service.py` — selects agents from global pool + generates new ones if needed
-2. Add `POST /api/simulations/{id}/prepare-audience` endpoint
-3. Status transition: `draft` → `audience_preparing` → `draft` (with audience ready)
-4. Test end-to-end
+**Step 5C — Runtime launcher + supervisor**
+1. Implement `runtime/launcher.py` — prepares and launches OASIS process
+2. Implement `runtime/supervisor.py` — monitors lifecycle, handles pause/stop
+3. Add `POST /api/simulations/{id}/launch` endpoint
+4. Status transitions: `draft` → `cost_check` → `bootstrapping` → `running`
 
-**Step 4D — Audience API endpoints**
-1. Implement `backend/app/api/audiences.py` — CRUD for saved audiences
-2. Test endpoints
+**Step 5D — Event bridge**
+1. Implement `runtime/event_bridge.py` — normalizes OASIS trace/SQLite events
+2. Implement `runtime/state_reader.py` — reads runtime state for canvas
+
+**Note**: OASIS integration depends on `oasis-main/` being present. If not available, implement the bridge interface with mock/stub runtime.
 
 ---
 
