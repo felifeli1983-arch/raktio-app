@@ -73,21 +73,60 @@ def count_global_agents_by_country(country: str) -> int:
 def find_global_agents(
     country: Optional[str] = None,
     stance: Optional[str] = None,
+    platforms: Optional[list[str]] = None,
+    exclude_ids: Optional[list[str]] = None,
     limit: int = 100,
     offset: int = 0,
 ) -> list[dict[str, Any]]:
-    """Find global agents with optional filters."""
+    """
+    Find global agents with optional filters.
+
+    Args:
+        country: Filter by country code
+        stance: Filter by base_stance_bias
+        platforms: If provided, only return agents that have presence on
+                   at least one of these platforms (via agent_platform_presence)
+        exclude_ids: Agent IDs to exclude (for dedup across batches)
+        limit: Max results
+        offset: Pagination offset
+    """
     sb = get_supabase()
-    query = (
-        sb.table("agents")
-        .select("*")
-        .eq("is_global", True)
-        .eq("status", "active")
-    )
+
+    if platforms:
+        # Join with agent_platform_presence to filter by platform
+        # Get agent_ids that have presence on any of the requested platforms
+        presence_result = (
+            sb.table("agent_platform_presence")
+            .select("agent_id")
+            .in_("platform", platforms)
+            .eq("is_active", True)
+            .execute()
+        )
+        platform_agent_ids = list({r["agent_id"] for r in (presence_result.data or [])})
+        if not platform_agent_ids:
+            return []  # No agents have the required platform presence
+
+        query = (
+            sb.table("agents")
+            .select("*")
+            .eq("is_global", True)
+            .eq("status", "active")
+            .in_("agent_id", platform_agent_ids)
+        )
+    else:
+        query = (
+            sb.table("agents")
+            .select("*")
+            .eq("is_global", True)
+            .eq("status", "active")
+        )
+
     if country:
         query = query.eq("country", country)
     if stance:
         query = query.eq("base_stance_bias", stance)
+    if exclude_ids:
+        query = query.not_.in_("agent_id", exclude_ids)
 
     result = query.range(offset, offset + limit - 1).execute()
     return result.data or []

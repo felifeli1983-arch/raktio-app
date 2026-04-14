@@ -73,6 +73,7 @@ class SimulationResponse(BaseModel):
     recsys_choice: RecsysChoice
     credit_estimate: Optional[int] = None
     credit_final: Optional[int] = None
+    audience_id: Optional[uuid.UUID] = None
     parent_simulation_id: Optional[uuid.UUID] = None
     compare_group_id: Optional[uuid.UUID] = None
     created_at: datetime

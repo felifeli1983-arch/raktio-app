@@ -162,6 +162,30 @@ async def generate_agents(
     if not isinstance(profiles, list):
         profiles = [profiles]
 
+    # Validate and sanitize LLM output
+    valid_profiles = []
+    for profile in profiles:
+        # Required fields check
+        fn = profile.get("first_name", "").strip()
+        ln = profile.get("last_name", "").strip()
+        if not fn or not ln:
+            continue  # Skip profiles without names
+
+        # Force country to match requested country (LLM may hallucinate)
+        profile["country"] = country
+
+        # Clamp stance to valid values
+        if profile.get("base_stance_bias") not in ("supportive", "neutral", "opposing", "observer"):
+            profile["base_stance_bias"] = "neutral"
+
+        # Clamp activity_level
+        if profile.get("activity_level") not in ("low", "medium", "high"):
+            profile["activity_level"] = "medium"
+
+        valid_profiles.append(profile)
+
+    profiles = valid_profiles
+
     # Convert LLM output to DB rows
     agent_rows = []
     platform_rows = []

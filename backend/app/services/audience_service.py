@@ -99,20 +99,31 @@ async def prepare_audience(
             countries = [{"code": c, "share": 1.0 / len(primary)} for c in primary]
 
         # 3. Source from global pool + generate gaps
+        # Track all sourced IDs to avoid cross-country duplicates
         all_agent_ids: list[str] = []
-        generation_summary: dict[str, Any] = {"sourced_from_pool": 0, "newly_generated": 0, "by_country": {}}
+        sourced_id_set: set[str] = set()
+        generation_summary: dict[str, Any] = {
+            "sourced_from_pool": 0,
+            "newly_generated": 0,
+            "by_country": {},
+            "total_requested": requested_count,
+        }
 
         for country_spec in countries:
             country_code = country_spec.get("code", "US")
             country_share = country_spec.get("share", 1.0)
             country_count = max(1, round(requested_count * country_share))
 
-            # Try to source from global pool
+            # Source from global pool — filter by platform presence,
+            # exclude already-sourced agents (cross-country dedup)
             existing = agent_repo.find_global_agents(
                 country=country_code,
+                platforms=platforms,
+                exclude_ids=list(sourced_id_set) if sourced_id_set else None,
                 limit=country_count,
             )
             sourced_ids = [a["agent_id"] for a in existing]
+            sourced_id_set.update(sourced_ids)
             generation_summary["sourced_from_pool"] += len(sourced_ids)
 
             # Generate missing agents
@@ -120,14 +131,12 @@ async def prepare_audience(
             generated_ids = []
 
             if gap > 0:
-                # Get segment descriptions from planner
                 segments = audience_comp.get("segments", [])
                 segment_desc = "; ".join(
                     f"{s['name']} ({s.get('description', '')})"
                     for s in segments
                 ) if segments else ""
 
-                # Generate in batches of 15
                 remaining = gap
                 while remaining > 0:
                     batch = min(remaining, 15)
@@ -141,7 +150,6 @@ async def prepare_audience(
                         )
                         generated_ids.extend(a["agent_id"] for a in new_agents)
                     except Exception:
-                        # If LLM generation fails, continue with what we have
                         break
                     remaining -= batch
 
@@ -155,6 +163,20 @@ async def prepare_audience(
                 "generated": len(generated_ids),
                 "total": min(len(country_agents), country_count),
             }
+
+        # Deduplicate final list (safety net for any remaining overlaps)
+        seen: set[str] = set()
+        deduped_ids: list[str] = []
+        for aid in all_agent_ids:
+            if aid not in seen:
+                seen.add(aid)
+                deduped_ids.append(aid)
+        all_agent_ids = deduped_ids
+
+        # Coverage quality
+        coverage_pct = round(len(all_agent_ids) / requested_count * 100, 1) if requested_count > 0 else 0
+        generation_summary["coverage_pct"] = coverage_pct
+        generation_summary["total_assembled"] = len(all_agent_ids)
 
         # 4. Create audience entity
         audience_row = agent_repo.insert_audience({
