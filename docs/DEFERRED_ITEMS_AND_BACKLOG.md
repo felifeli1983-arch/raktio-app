@@ -881,5 +881,16 @@ Post-10.5 refinement pass to harden quality before frontend work.
 | FE-02 | Admin pages |
 | FE-04 | Admin route blocking |
 
+### New findings from deep audit (2026-04-14)
+
+| ID | Issue | Timing |
+|----|-------|--------|
+| MEM-02g | Memory summary unbounded growth (no max length) | DO BEFORE FRONTEND |
+| AUTH-01 | /api/billing/plans has no auth guard — document or fix | DO BEFORE FRONTEND |
+| AUTH-02 | SSE ?token= in URL — log/history exposure risk | DO BEFORE PRODUCTION |
+| RPQ-02 | No LLM JSON output schema validation in report_service | DO BEFORE PRODUCTION |
+| CLEAN-01 | Delete 34 stubs + 12 empty model files | DO BEFORE PRODUCTION |
+| SIM-03 | Re-understand/re-plan overwrite without warning | CAN WAIT |
+
 ### DONE items
-MEM-01, MEM-02, BIL-01, BIL-02, BIL-03, BIL-05d, ADM-01, ADM-02, ADM-03, ADM-04, 10.5D (temporal)
+MEM-01, MEM-02, BIL-01, BIL-02, BIL-03, BIL-05d, DIST-01, DIST-01b, ADM-01, ADM-02, ADM-03, ADM-04, 10.5D (temporal)
