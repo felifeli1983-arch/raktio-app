@@ -738,12 +738,18 @@ The backend population/memory system must support:
 - **Stance assignment**: global random from stance_distribution (per-segment bias deferred)
 - **active_platforms_json**: set from simulation platform_scope
 
-### Memory system
-- **NOT YET IMPLEMENTED**
-- No memory tables (agent_memory_summaries, episodic_memory, relationship_memory, topic_exposure, memory_update_jobs)
-- No post-run memory transformation
-- runtime_stance never updated after initial assignment
-- This is the most significant gap for persistent agent evolution
+### Memory system (updated 2026-04-14, Step 10.5A)
+- **Tables live** (migration 008, 25 total):
+  - `agent_memory_summaries` — rolling summary per agent (text + topic/relationship/stance JSONBs)
+  - `agent_episodic_memory` — semantic episodes from runs (13 episode types, topic/geo/platform tags, importance)
+  - `agent_relationship_memory` — cross-run relationships (9 types, strength, flags)
+  - `agent_topic_exposure` — topic exposure tracking (counts, stance tendency)
+  - `memory_update_jobs` — post-run transformation tracking
+- **Repository implemented** — full CRUD with upsert support
+- **NOT YET IMPLEMENTED**:
+  - Post-run memory transformation service (Step 10.5B) — trace events → episodes
+  - Memory-informed agent prompts (Step 10.5C) — feed memory into OASIS UserInfo
+  - runtime_stance still set once at assembly, never updated
 
 ### Private audiences
 - Schema supports `is_private` flag on audiences and `population_tier` on agents

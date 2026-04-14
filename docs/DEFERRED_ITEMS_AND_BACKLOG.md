@@ -200,16 +200,10 @@
 
 ## Memory System
 
-### MEM-01: Memory domain tables
+### MEM-01: Memory domain tables ✅ DONE
 - **Area**: Memory
-- **Description**: 5 tables from DATA_MODEL_AND_STORAGE.md Domain 4 not created: `agent_memory_summaries`, `agent_episodic_memory`, `agent_relationship_memory`, `agent_topic_exposure`, `memory_update_jobs`. This is the biggest gap for persistent agent evolution.
-- **Why deferred**: Requires post-run memory transformation service that converts OASIS trace events into semantic episodes.
-- **Dependencies**: OASIS runtime (done), event bridge (done)
-- **Priority**: HIGH
-- **Type**: Missing feature
-- **Related files**: `DATA_MODEL_AND_STORAGE.md` Domain 4, `AGENTS_AUDIENCE_MEMORY.md`
-- **Recommended step**: Dedicated memory system step (post-Step 8)
-- **Status**: DEFERRED
+- **Description**: 5 tables live (migration 008, 25 tables total): `agent_memory_summaries`, `agent_episodic_memory`, `agent_relationship_memory`, `agent_topic_exposure`, `memory_update_jobs`. Full repository implemented with upsert, batch insert, query functions.
+- **Status**: DONE (Step 10.5A)
 
 ### MEM-02: Post-run memory transformation
 - **Area**: Memory

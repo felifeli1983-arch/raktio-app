@@ -876,3 +876,14 @@ The minimum persistent schema should cover:
 | Analytics | llm_usage_log | Live (migration 006). Append-only log of all LLM calls with token counts, cost estimates, context IDs. RLS restricted to billing/org/platform admins. |
 
 **Total tables live: 19**
+
+### Memory tables (Step 10.5A, 2026-04-14)
+| Domain | Table | Status |
+|--------|-------|--------|
+| Memory | agent_memory_summaries | Live (migration 008). Rolling summary per agent. |
+| Memory | agent_episodic_memory | Live. Semantic episodes from runs. 13 episode types. |
+| Memory | agent_relationship_memory | Live. Cross-run relationships. 9 relationship types. |
+| Memory | agent_topic_exposure | Live. Topic exposure tracking with stance tendency. |
+| Memory | memory_update_jobs | Live. Post-run transformation job tracking. |
+
+**Total tables live: 25**
