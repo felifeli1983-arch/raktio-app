@@ -211,8 +211,12 @@ A structured prerequisite block before frontend implementation.
 4. **10.5H: Platform Behavior** — per-platform action weight profiles
 
 **After 10.5H:**
-- Step 10.6: Refinement batch (report hardening, LLM topic extraction,
-  per-segment stance, Agent Atlas API, summary synthesis, relationship accumulation)
+- Step 10.6: Refinement & realism batch (before frontend):
+  - Report excellence (RPQ-01, RP-02c, RP-02b)
+  - Memory quality (MEM-02b LLM topics, MEM-02c summaries, MEM-02e relationships)
+  - Population (POP-01 per-segment stance, POP-03 Agent Atlas API)
+  - Realism (GEO-01 geography in evidence, SIM-01 fresh/memory mode, INF-06 influencer agents)
+  - Distribution (DIST-02 algorithm behavior, DIST-04 seeded content)
 - Step 11: Frontend Pages
 - Step 12: Integration Testing
 

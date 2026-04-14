@@ -64,6 +64,186 @@
 
 ---
 
+## Distribution & Virality
+
+### DIST-01: Publisher authority / reputation scoring
+- **Area**: Distribution
+- **Description**: All agents currently have equal reach mechanics. In reality, high-follower agents should have posts seen by more people. `influence_weight` and `follower_band` exist in agent profiles but don't affect OASIS recsys exposure. Need to weight recommendation/exposure by agent authority.
+- **Why it matters**: Without authority gradient, a nano-follower has the same reach as a macro-influencer. This undermines platform realism and "who drives the narrative" analysis.
+- **Priority**: HIGH
+- **Type**: Missing feature
+- **Dependencies**: None (agent fields exist)
+- **Timing**: DO NOW (Step 10.5E — next)
+- **Status**: DEFERRED
+
+### DIST-02: Platform algorithm behavior modeling
+- **Area**: Distribution
+- **Description**: OASIS recsys options (random, reddit, personalized, twhin-bert) don't model platform-specific algorithmic promotion (trending boost, engagement-based amplification, recency decay). Content that gets early engagement should be promoted more.
+- **Why it matters**: Platform algorithms are the biggest driver of what spreads vs what dies. Without this, viral dynamics are unrealistic.
+- **Priority**: MEDIUM
+- **Type**: Enhancement
+- **Dependencies**: DIST-01
+- **Timing**: DO BEFORE FRONTEND
+- **Status**: DEFERRED
+
+### DIST-03: Competition / noise context
+- **Area**: Distribution
+- **Description**: Simulations currently exist in a vacuum — the only content is what agents create about the brief topic. Real social feeds have competing content, unrelated posts, and information noise that affects attention and engagement.
+- **Why it matters**: Testing message performance in a noise-free environment overstates resonance. Real briefs compete for attention.
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Dependencies**: None
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
+### DIST-04: Seeded content distribution
+- **Area**: Distribution
+- **Description**: Ability to inject initial "seed" content (the actual post/campaign being tested) at a specific simulated time, then observe organic reactions. Currently the brief influences agent behavior but the exact content being tested isn't posted as a seed.
+- **Why it matters**: Users want to test a specific post/message, not just a topic. Seeding lets the simulation react to the exact content.
+- **Priority**: MEDIUM
+- **Type**: Missing feature
+- **Dependencies**: None
+- **Timing**: DO BEFORE FRONTEND
+- **Status**: DEFERRED
+
+### DIST-05: Amplifier archetype detection
+- **Area**: Distribution
+- **Description**: Post-run classification of agents into amplifier archetypes (early adopter, bridge node, echo chamber member, contrarian, passive observer). Currently `patient_zero` report section infers this from evidence, but no structured archetype tagging exists.
+- **Why it matters**: Structured archetypes enable segment-based analysis and audience refinement.
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Dependencies**: MEM-02b (better topic extraction)
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
+### DIST-06: Virality / amplification scoring
+- **Area**: Distribution
+- **Description**: Framework for scoring cascade depth, spread speed, reach ratio per post. Must be presented as scenario-based guidance ("this type of content tends to spread in this pattern"), NOT as certainty. Raktio must never claim to predict real-world virality.
+- **Why it matters**: Comparative virality signals between simulations are valuable for iteration. But must be framed honestly as plausible patterns, not guarantees.
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Dependencies**: DIST-01, DIST-02
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
+---
+
+## Influence Model
+
+### INF-06: Stronger influencer agent synthesis
+- **Area**: Influence / Population
+- **Description**: Generate or tag synthetic agents with explicit influencer profiles (fashion influencer, tech thought leader, local community leader). These agents should have high `influence_weight`, appropriate `follower_band`, and domain-specific expertise that makes them realistic test subjects for "how would influencers react" scenarios.
+- **Why it matters**: Brand/agency users want to test influencer-led scenarios (e.g., "what if a fashion influencer promotes this product"). Currently all agents are generic.
+- **Priority**: MEDIUM
+- **Type**: Enhancement
+- **Dependencies**: DIST-01 (influence weight matters in reach)
+- **Timing**: DO BEFORE FRONTEND
+- **Status**: DEFERRED
+
+### INF-07: Bridge agent identification
+- **Area**: Influence
+- **Description**: Identify agents who connect otherwise separate clusters during a simulation. Bridge agents are high-value for understanding cross-segment spread. Currently only inferred in the faction_analysis report section.
+- **Why it matters**: "Which agent type bridges the skeptics and supporters" is a key strategic insight.
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Dependencies**: Interaction matrix (exists)
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
+---
+
+## Simulation Modes
+
+### SIM-01: Fresh vs memory-informed simulation mode
+- **Area**: Simulation
+- **Description**: Users should be able to choose between: (a) **Fresh/baseline** — agents participate without memory context (clean slate, useful for controlled experiments), (b) **Persistent/memory-informed** — agents carry prior memory (realistic longitudinal behavior). This should be a clear option in simulation setup.
+- **Why it matters**: A/B testing requires fresh baselines. Longitudinal campaigns need persistent memory. Both modes are valuable.
+- **Priority**: MEDIUM
+- **Type**: Missing feature
+- **Dependencies**: Memory system (10.5A-C, done)
+- **Timing**: DO BEFORE FRONTEND
+- **Status**: DEFERRED
+
+### SIM-02: Memory as light influence, not dominant force
+- **Area**: Simulation / Memory
+- **Description**: Agent memory should subtly influence behavior (topic familiarity, relationship continuity) without making agents rigid or over-determined. An agent who was skeptical in one simulation shouldn't be locked into skepticism forever. Memory should create tendencies, not determinism.
+- **Why it matters**: Over-weighted memory makes simulations predictable and agents feel scripted. Under-weighted memory makes persistence meaningless.
+- **Priority**: LOW (currently memory is ~315 chars in description — naturally light)
+- **Type**: Design principle
+- **Dependencies**: Memory system (done)
+- **Timing**: CAN WAIT (monitor as memory accumulates across many runs)
+- **Status**: DEFERRED
+
+---
+
+## Geography & Platform Realism
+
+### GEO-01: Stronger geography in evidence and reporting
+- **Area**: Geography
+- **Description**: Agent geography exists in Supabase profiles but is not in the OASIS SQLite evidence bundle. Reports and compare cannot do real geography-based analysis — they infer from agent descriptions. Agent country/city should be included in the evidence bundle and the report prompt.
+- **Why it matters**: "Your message works in Milan but fails in Naples" is a key product promise. Without real geo data in evidence, geo analysis sections are speculative.
+- **Priority**: MEDIUM
+- **Type**: Enhancement
+- **Dependencies**: None
+- **Timing**: DO BEFORE FRONTEND
+- **Status**: DEFERRED
+
+### PLAT-01: LinkedIn runtime behavior model
+- **Area**: Platform
+- **Description**: LinkedIn simulations currently use Twitter OASIS mode with "LinkedIn" label. Need: professional tone weighting, higher reputation signaling, lower aggression default, longer-form content tendency, connection-based (not follower-based) reach.
+- **Why it matters**: LinkedIn users behave fundamentally differently than Twitter users. Credible LinkedIn simulation requires runtime-level behavioral differences.
+- **Priority**: MEDIUM
+- **Type**: Missing feature
+- **Dependencies**: Step 10.5H (platform action weight profiles)
+- **Timing**: Step 10.5H
+- **Status**: DEFERRED
+
+### PLAT-02: Instagram runtime behavior model
+- **Area**: Platform
+- **Description**: Instagram simulations need: more visual framing, shorter comments, aesthetic/social proof emphasis, weaker explicit dislike semantics, higher like-to-comment ratio.
+- **Priority**: MEDIUM
+- **Dependencies**: Step 10.5H
+- **Timing**: Step 10.5H
+- **Status**: DEFERRED
+
+### PLAT-03: TikTok runtime behavior model
+- **Area**: Platform
+- **Description**: TikTok simulations need: rapid reaction cycles, trend/slang influence, very short commentary, faster polarizing spread, higher reshare tendency.
+- **Priority**: LOW
+- **Dependencies**: Step 10.5H
+- **Timing**: Step 10.5H
+- **Status**: DEFERRED
+
+---
+
+## Source / Knowledge Realism
+
+### SRC-01: Source-grounded simulation importance
+- **Area**: Knowledge
+- **Description**: Simulations grounded in uploaded real-world materials (competitor analysis, market research, press releases) produce more relevant agent behavior and more credible findings. This is especially important for enterprise/B2B users who work with documents.
+- **Why it matters**: The difference between "simulate reaction to this topic" and "simulate reaction to this specific document" is the difference between generic and valuable.
+- **Priority**: MEDIUM
+- **Type**: Design principle
+- **Dependencies**: KS-01, KS-02 (Step 10.5F-G)
+- **Timing**: Step 10.5F-G
+- **Status**: DEFERRED
+
+---
+
+## Report Quality
+
+### RPQ-01: Report excellence as explicit product requirement
+- **Area**: Reports
+- **Description**: Reports must be robust, low-fragility, low-latency, and strongly evidence-grounded. This is not optional polish — it is a core product quality requirement. Covers: section fragility (3/14 failed in stress test), generation latency (570s for 14 sections), prompt bloat, evidence precision. Already tracked as RP-02c but elevated here as a product-level requirement.
+- **Why it matters**: Reports are one of the primary reasons users pay for Raktio. Poor report quality directly undermines product credibility.
+- **Priority**: HIGH
+- **Type**: Product requirement
+- **Dependencies**: None
+- **Timing**: DO AFTER CURRENT BLOCK (Step 10.6 refinement batch)
+- **Status**: DEFERRED — planned for Step 10.6
+
+---
+
 ## Reports / Compare
 
 ### RP-01: Report evidence links table
@@ -614,26 +794,31 @@ Every deferred item must have a timing classification:
 - **DO BEFORE FRONTEND** — must be done before Step 11 (Frontend)
 - **CAN WAIT** — not needed before launch / production / frontend
 
-### Reality Upgrade Block — remaining (Step 10.5D-H)
+### Reality Upgrade Block — remaining (Step 10.5E-H)
 | Step | Item | Timing |
 |------|------|--------|
-| 10.5D | Temporal activity multipliers | DO NOW (next) |
-| 10.5E | Influence-weighted reach | DO NOW |
-| 10.5F | Source/Knowledge tables + upload | DO NOW |
+| ~~10.5D~~ | ~~Temporal activity multipliers~~ | ~~DONE~~ |
+| 10.5E | Influence-weighted reach (DIST-01) | DO NOW (next) |
+| 10.5F | Source/Knowledge tables + upload (KS-01, KS-02, SRC-01) | DO NOW |
 | 10.5G | Source-aware brief understanding | DO NOW |
-| 10.5H | Platform behavior profiles | DO NOW |
+| 10.5H | Platform behavior profiles (PLAT-01, PLAT-02, PLAT-03) | DO NOW |
 
 ### Refinement Batch — Step 10.6 (after 10.5H, before Frontend)
 Post-10.5 refinement pass to harden quality before frontend work.
 | Item | Description | Timing |
 |------|-------------|--------|
-| RP-02c | Report excellence hardening | DO AFTER CURRENT BLOCK |
+| RPQ-01 / RP-02c | Report excellence hardening | DO AFTER CURRENT BLOCK |
+| RP-02b | Report section fragility fix | DO AFTER CURRENT BLOCK |
 | MEM-02b | LLM-based topic extraction | DO AFTER CURRENT BLOCK |
 | MEM-02c | LLM-based summary synthesis | DO BEFORE FRONTEND |
 | MEM-02e | Relationship strength accumulation | DO BEFORE FRONTEND |
-| RP-02b | Report section fragility fix | DO AFTER CURRENT BLOCK |
 | POP-01 | Per-segment stance assignment | DO BEFORE FRONTEND |
 | POP-03 | Agent Atlas API | DO BEFORE FRONTEND |
+| GEO-01 | Geography in evidence/reporting | DO BEFORE FRONTEND |
+| SIM-01 | Fresh vs memory-informed sim mode | DO BEFORE FRONTEND |
+| INF-06 | Stronger influencer agent synthesis | DO BEFORE FRONTEND |
+| DIST-02 | Platform algorithm behavior | DO BEFORE FRONTEND |
+| DIST-04 | Seeded content distribution | DO BEFORE FRONTEND |
 
 ### Items that CAN WAIT (post-frontend / production)
 | Item | Description |
@@ -641,6 +826,11 @@ Post-10.5 refinement pass to harden quality before frontend work.
 | MEM-02d | Episode dedup guard |
 | MEM-02f | N+1 query pattern (scale) |
 | MEM-03 | Belief trajectory over time |
+| SIM-02 | Memory as light influence (monitor) |
+| DIST-03 | Competition / noise context |
+| DIST-05 | Amplifier archetype detection |
+| DIST-06 | Virality / amplification scoring |
+| INF-07 | Bridge agent identification |
 | RT-01 | ARQ background worker |
 | RT-02 | Interview bridge |
 | RT-04 | Group simulation actions |
@@ -674,4 +864,4 @@ Post-10.5 refinement pass to harden quality before frontend work.
 | FE-04 | Admin route blocking |
 
 ### DONE items
-MEM-01, MEM-02, BIL-01, BIL-02, BIL-03, BIL-05d, ADM-01, ADM-02, ADM-03, ADM-04
+MEM-01, MEM-02, BIL-01, BIL-02, BIL-03, BIL-05d, ADM-01, ADM-02, ADM-03, ADM-04, 10.5D (temporal)
