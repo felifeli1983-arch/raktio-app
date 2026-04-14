@@ -392,10 +392,18 @@ This prerequisite block must complete before Step 8 begins.
   - Status lifecycle: sim goes `draft→cost_check→bootstrapping→running→completing→completed` (or `failed`). Run mirrors `bootstrapping→running→completed`. `completing` is a real transitional state between last step and env.close(). `reporting` set by report_service only.
   - Action set expanded from 11 to 21: full social action grammar minus internal mechanics (REFRESH/SIGNUP/EXIT/UPDATE_REC_TABLE), special actions (INTERVIEW/PURCHASE_PRODUCT), and deferred group actions (5). Documented and categorized in oasis_worker.py.
 
-**Step 7.5C — Verified event bridge**
-1. Update event_bridge.py with real OASIS SQLite table names/columns
-2. Implement real event normalization from actual tables
-3. Test: run small sim → read events → verify they're real
+**Step 7.5C — Verified event bridge** ✅ COMPLETED
+- `event_bridge.py` fully rewritten against real OASIS v0.2.5 SQLite schema
+- `trace` table is now the PRIMARY event source (20 action types → product events)
+- `user` table used for `user_id` → `username` mapping
+- `rec` table read for exposure/recommendation analysis
+- `[like]` properly quoted (SQL reserved word fix)
+- `comment` is a first-class event type
+- `read_posts()`, `read_comments()`, `read_exposure()` with enriched metadata
+- `build_evidence_bundle()` produces complete runtime evidence: posts, comments, trace counts, per-agent activity, top posts, exposure records
+- `state_reader.py` updated to use trace-based event reading
+- Tested: all 8 test categories pass against real OASIS SQLite DB
+- Incremental reading via `since_rowid` works correctly
 
 **Step 7.5D — Live streaming**
 1. Worker publishes status updates during env.step()
