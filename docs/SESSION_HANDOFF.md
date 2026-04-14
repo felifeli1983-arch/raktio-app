@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 6 — Live Streaming (SSE)**
+> Last completed step: **Step 7 — Reports + Compare**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git (branch `main`)
 
 ---
@@ -87,9 +87,17 @@
   - `frontend/lib/hooks/useSimulationStream.ts` — React EventSource hook with reconnection, event buffering (last 500), status tracking
   - Tests pass: SSE content-type, run_state/simulation_ended events, 401 without auth, 403 for non-members
 
+- **Step 7: Reports + Compare** — implemented and tested:
+  - Migration `004_reports_and_compare.sql` — 3 new tables (reports, report_sections, compare_runs) with RLS. Applied to live Supabase (18 tables total).
+  - `report_service.py` — progressive 10-section report generation via Claude Sonnet (REPORT route), sections fail independently
+  - `compare_service.py` — structured 2-simulation comparison via Claude Sonnet (REPORT route)
+  - `api/reports.py` — GET list, GET single, POST generate
+  - `api/compare.py` — GET list, GET single, POST create
+  - `schemas/report.py`, `schemas/compare.py` — Pydantic models
+  - Tests pass: all endpoints registered, report record created (sections fail gracefully without API key), compare fails at LLM (502), permissions enforced
+  - **Git**: local `main` ahead by 4 commits; pushed to branch `feat/steps-4-7-full`. User needs to merge to main.
+
 ### Not Started Yet
-- Step 6: Live streaming (SSE)
-- Step 7: Reports + Compare
 - Step 8: Billing / credits
 - Step 9: Admin panel
 - All frontend pages beyond login/signup are placeholder stubs
@@ -332,26 +340,30 @@ raktio-app/
 
 ## 5. Next Exact Implementation Step
 
-### Step 7: Reports + Compare
+### Step 8: Billing / Credits
 
 Split into micro-steps:
 
-**Step 7A — Reports tables migration**
-1. Create `004_reports_and_compare.sql` — tables: reports, report_sections, compare_groups, compare_runs
-2. Apply migration to live Supabase
+**Step 8A — Billing service**
+1. Implement `billing_service.py` — plan entitlements, credit consumption, pack purchases
+2. Credit cost calculation with full formula (agents × duration × platform × geography)
+3. Implement `billing/credit_rules.py` — actual cost rules from PRICING_AND_CREDITS.md
 
-**Step 7B — Report generation service**
-1. Implement `report_service.py` — calls Claude Sonnet (REPORT route) to generate report sections
-2. Progressive section generation (executive summary, key findings, belief shifts, etc.)
-3. Store in reports + report_sections tables
+**Step 8B — Billing API endpoints**
+1. Implement `api/billing.py` — GET balance, GET usage history, POST buy credits
+2. Implement `schemas/billing.py` — Pydantic models
+3. Test endpoints
 
-**Step 7C — Report API endpoints**
-1. Implement `api/reports.py` — GET list, GET single, POST generate
-2. Implement `schemas/report.py` — Pydantic models
+**Step 8C — Credit finalization on simulation completion**
+1. Wire credit finalization into simulation completion flow
+2. Update credit_ledger with `simulation_finalization` event
+3. Settle reserved → deducted credits
 
-**Step 7D — Compare service + API**
-1. Implement `compare_service.py` — structured comparison between two simulations
-2. Implement `api/compare.py` — GET, POST endpoints
+### After Step 8, remaining steps:
+- Step 9: Admin panel API
+- Step 10: Team & Governance API
+- Step 11: Frontend page implementations (Overview, New Sim, Canvas, etc.)
+- Step 12: Integration testing & deployment prep
 
 ---
 
