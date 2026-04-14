@@ -310,6 +310,17 @@
 - **Recommended step**: Admin panel or billing refinement
 - **Status**: DEFERRED
 
+### BIL-05d: Wire log_context into all LLM-calling services
+- **Area**: Billing / Analytics
+- **Description**: `llm_adapter.complete()` accepts `log_context` for attributing usage to simulations, orgs, reports, etc. Currently NO service passes it. All LLM calls are logged (provider, model, route, tokens, cost) but without simulation_id, organization_id, or other context IDs. Usage cannot be attributed to specific simulations or orgs until this is wired.
+- **Why deferred**: Core logging works. Wiring context into each service (brief_service, planner_service, report_service, compare_service, agent_service, oasis_worker) requires passing IDs through call chains.
+- **Dependencies**: None (infrastructure exists)
+- **Priority**: MEDIUM
+- **Type**: Enhancement
+- **Related files**: `services/brief_service.py`, `services/planner_service.py`, `services/report_service.py`, `services/compare_service.py`, `services/agent_service.py`
+- **Recommended step**: Next available micro-step or service refinement pass
+- **Status**: DEFERRED
+
 ### BIL-05c: Cost-based pricing recommendations
 - **Area**: Billing / Analytics
 - **Description**: The `llm_usage_log` data could power automatic pricing recommendations (e.g., "this simulation cost $X in LLM calls, the credit charge was Y credits — suggest adjusting the formula"). This is explicitly designed as a future capability — the current system only measures, never auto-modifies.

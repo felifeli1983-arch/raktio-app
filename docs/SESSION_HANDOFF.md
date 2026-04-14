@@ -96,6 +96,12 @@
 | GET | `/{id}` | Get single audience |
 | DELETE | `/{id}` | Archive audience |
 
+### Billing (`/api/billing`)
+| GET | `/balance` | Credit balance + plan info |
+| GET | `/usage` | Credit usage history (ledger) |
+| POST | `/estimate` | Estimate simulation cost (full formula) |
+| GET | `/plans` | List all plans (public) |
+
 ### Stream (`/api/stream`)
 | GET | `/{sim_id}` | SSE stream (auth via header or `?token=`) |
 
@@ -156,7 +162,12 @@
 | `app/api/compare.py` | 3 endpoints |
 | `app/api/audiences.py` | 3 endpoints |
 | `app/api/stream.py` | SSE with dual auth |
+| `app/api/billing.py` | 4 endpoints (balance, usage, estimate, plans) |
+| `app/billing/credit_rules.py` | Full credit formula (agents × duration × platform × geography) |
+| `app/billing/entitlements.py` | Plan lookup, agent limit, feature flags |
+| `app/repositories/llm_usage.py` | LLM usage log repository |
 | `app/schemas/simulation.py` | Pydantic models (includes audience_id) |
+| `app/schemas/billing.py` | Billing Pydantic models |
 | `app/schemas/audience.py` | Pydantic models |
 | `app/schemas/report.py` | Pydantic models |
 | `app/schemas/compare.py` | Pydantic models |
