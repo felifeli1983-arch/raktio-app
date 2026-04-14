@@ -13,9 +13,14 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.auth.guards import WorkspaceContext, require_workspace_member
+from app.auth.permissions import (
+    can_create_simulation,
+    can_delete_simulation,
+    can_edit_simulation,
+)
 from app.schemas.simulation import (
     SimulationCreate,
     SimulationListResponse,
@@ -33,11 +38,7 @@ async def create_simulation(
     ctx: WorkspaceContext = Depends(require_workspace_member),
 ):
     """Create a new simulation in draft status."""
-    # Only contributors and above can create
-    if ctx.member_role not in (
-        "contributor", "editor", "workspace_admin", "org_admin", "platform_admin"
-    ):
-        from fastapi import HTTPException, status
+    if not can_create_simulation(ctx.member_role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Viewers cannot create simulations",
@@ -83,10 +84,7 @@ async def update_simulation(
     ctx: WorkspaceContext = Depends(require_workspace_member),
 ):
     """Update a draft simulation's configuration."""
-    if ctx.member_role not in (
-        "contributor", "editor", "workspace_admin", "org_admin", "platform_admin"
-    ):
-        from fastapi import HTTPException, status
+    if not can_edit_simulation(ctx.member_role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Viewers cannot modify simulations",
@@ -105,10 +103,7 @@ async def delete_simulation(
     ctx: WorkspaceContext = Depends(require_workspace_member),
 ):
     """Delete a draft or canceled simulation."""
-    if ctx.member_role not in (
-        "editor", "workspace_admin", "org_admin", "platform_admin"
-    ):
-        from fastapi import HTTPException, status
+    if not can_delete_simulation(ctx.member_role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only editors and above can delete simulations",

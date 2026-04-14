@@ -1,8 +1,8 @@
 """
 Raktio Service — Simulation CRUD + credit validation.
 
-All DB operations use the service_role client (bypasses RLS).
-Authorization is already enforced by the guards in the API layer.
+Orchestration layer: validates business rules, delegates DB access to
+repositories/simulations.py. Never calls sb.table() directly.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.db.supabase_client import get_supabase
+from app.repositories import simulations as sim_repo
 from app.schemas.simulation import (
     SimulationCreate,
     SimulationListResponse,
@@ -42,42 +42,27 @@ def estimate_credits(agent_count: int, duration_preset: str) -> int:
     return max(1, round(agent_count * _BASE_COST_PER_AGENT * multiplier))
 
 
-# ── Helpers ────────────────────────────────────────────────────────────
+# ── Validation helpers ─────────────────────────────────────────────────
 
-def _get_org_for_workspace(workspace_id: uuid.UUID) -> uuid.UUID:
-    """Look up the organization_id for a workspace."""
-    sb = get_supabase()
-    result = (
-        sb.table("workspaces")
-        .select("organization_id")
-        .eq("workspace_id", str(workspace_id))
-        .limit(1)
-        .execute()
-    )
-    if not result.data or not result.data[0].get("organization_id"):
+def _get_org_for_workspace(workspace_id: uuid.UUID) -> str:
+    """Look up the organization_id for a workspace. Raises 404 if missing."""
+    org_id = sim_repo.get_workspace_org_id(workspace_id)
+    if not org_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace not found or has no organization",
         )
-    return uuid.UUID(result.data[0]["organization_id"])
+    return org_id
 
 
-def _check_credit_balance(organization_id: uuid.UUID, required: int) -> None:
+def _check_credit_balance(organization_id: str, required: int) -> None:
     """Raise 402 if the org doesn't have enough available credits."""
-    sb = get_supabase()
-    result = (
-        sb.table("credit_balances")
-        .select("available_credits")
-        .eq("organization_id", str(organization_id))
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
+    available = sim_repo.get_available_credits(organization_id)
+    if available is None:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail="No credit balance found for this organization",
         )
-    available = result.data[0]["available_credits"]
     if available < required:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
@@ -85,34 +70,14 @@ def _check_credit_balance(organization_id: uuid.UUID, required: int) -> None:
         )
 
 
-def _check_agent_limit(organization_id: uuid.UUID, requested: int) -> None:
+def _check_agent_limit(organization_id: str, requested: int) -> None:
     """Raise 403 if the requested agent count exceeds the plan limit."""
-    sb = get_supabase()
-    result = (
-        sb.table("organizations")
-        .select("plan_id")
-        .eq("organization_id", str(organization_id))
-        .limit(1)
-        .execute()
-    )
-    if not result.data:
-        return  # no org → will fail elsewhere
-
-    plan_id = result.data[0]["plan_id"]
-    plan_result = (
-        sb.table("plans")
-        .select("agent_limit")
-        .eq("plan_id", plan_id)
-        .limit(1)
-        .execute()
-    )
-    if plan_result.data:
-        limit = plan_result.data[0]["agent_limit"]
-        if requested > limit:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Agent count {requested} exceeds plan limit of {limit}. Upgrade your plan.",
-            )
+    limit = sim_repo.get_org_plan_agent_limit(organization_id)
+    if limit is not None and requested > limit:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Agent count {requested} exceeds plan limit of {limit}. Upgrade your plan.",
+        )
 
 
 # ── CRUD ───────────────────────────────────────────────────────────────
@@ -126,19 +91,12 @@ async def create_simulation(
     Create a new simulation in 'draft' status.
     Validates: plan agent limit and credit estimate (soft check — no reservation yet).
     """
-    sb = get_supabase()
     org_id = _get_org_for_workspace(workspace_id)
-
-    # Validate plan limits
     _check_agent_limit(org_id, data.agent_count_requested)
 
-    # Estimate credits
     credit_est = estimate_credits(data.agent_count_requested, data.duration_preset)
-
-    # Soft credit check (no reservation until launch)
     _check_credit_balance(org_id, credit_est)
 
-    # Insert
     row = {
         "workspace_id": str(workspace_id),
         "created_by_user_id": str(user_id),
@@ -155,15 +113,14 @@ async def create_simulation(
         "credit_estimate": credit_est,
     }
 
-    result = sb.table("simulations").insert(row).execute()
-
-    if not result.data:
+    inserted = sim_repo.insert(row)
+    if not inserted:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create simulation",
         )
 
-    return SimulationResponse(**result.data[0])
+    return SimulationResponse(**inserted)
 
 
 async def list_simulations(
@@ -172,35 +129,11 @@ async def list_simulations(
     page_size: int = 20,
 ) -> SimulationListResponse:
     """List simulations for a workspace, paginated, newest first."""
-    sb = get_supabase()
     offset = (page - 1) * page_size
-
-    # Count total
-    count_result = (
-        sb.table("simulations")
-        .select("simulation_id", count="exact")
-        .eq("workspace_id", str(workspace_id))
-        .execute()
-    )
-    total = count_result.count or 0
-
-    # Fetch page
-    result = (
-        sb.table("simulations")
-        .select("*")
-        .eq("workspace_id", str(workspace_id))
-        .order("created_at", desc=True)
-        .range(offset, offset + page_size - 1)
-        .execute()
-    )
-
-    items = [SimulationResponse(**row) for row in (result.data or [])]
-
+    rows, total = sim_repo.list_by_workspace(workspace_id, offset, page_size)
+    items = [SimulationResponse(**row) for row in rows]
     return SimulationListResponse(
-        items=items,
-        total=total,
-        page=page,
-        page_size=page_size,
+        items=items, total=total, page=page, page_size=page_size
     )
 
 
@@ -209,23 +142,13 @@ async def get_simulation(
     workspace_id: uuid.UUID,
 ) -> SimulationResponse:
     """Get a single simulation by ID, scoped to workspace."""
-    sb = get_supabase()
-    result = (
-        sb.table("simulations")
-        .select("*")
-        .eq("simulation_id", str(simulation_id))
-        .eq("workspace_id", str(workspace_id))
-        .limit(1)
-        .execute()
-    )
-
-    if not result.data:
+    row = sim_repo.find_by_id(simulation_id, workspace_id)
+    if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Simulation not found",
         )
-
-    return SimulationResponse(**result.data[0])
+    return SimulationResponse(**row)
 
 
 async def update_simulation(
@@ -237,9 +160,6 @@ async def update_simulation(
     Update mutable fields of a simulation.
     Only allowed when status is 'draft'.
     """
-    sb = get_supabase()
-
-    # Verify simulation exists and is in draft status
     existing = await get_simulation(simulation_id, workspace_id)
     if existing.status != "draft":
         raise HTTPException(
@@ -247,11 +167,7 @@ async def update_simulation(
             detail=f"Cannot edit simulation in '{existing.status}' status. Only 'draft' simulations can be modified.",
         )
 
-    # Build update payload (only non-None fields)
-    update_data: dict[str, Any] = {}
-    for field, value in data.model_dump(exclude_none=True).items():
-        update_data[field] = value
-
+    update_data: dict[str, Any] = data.model_dump(exclude_none=True)
     if not update_data:
         return existing
 
@@ -260,35 +176,25 @@ async def update_simulation(
     duration = update_data.get("duration_preset", existing.duration_preset)
     update_data["credit_estimate"] = estimate_credits(agent_count, duration)
 
-    # Validate new agent count against plan limit
     if "agent_count_requested" in update_data:
         org_id = _get_org_for_workspace(workspace_id)
         _check_agent_limit(org_id, update_data["agent_count_requested"])
 
-    result = (
-        sb.table("simulations")
-        .update(update_data)
-        .eq("simulation_id", str(simulation_id))
-        .eq("workspace_id", str(workspace_id))
-        .execute()
-    )
-
-    if not result.data:
+    updated = sim_repo.update(simulation_id, workspace_id, update_data)
+    if not updated:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update simulation",
         )
 
-    return SimulationResponse(**result.data[0])
+    return SimulationResponse(**updated)
 
 
 async def delete_simulation(
     simulation_id: uuid.UUID,
     workspace_id: uuid.UUID,
 ) -> None:
-    """
-    Delete a simulation. Only allowed in 'draft' or 'canceled' status.
-    """
+    """Delete a simulation. Only allowed in 'draft' or 'canceled' status."""
     existing = await get_simulation(simulation_id, workspace_id)
     if existing.status not in ("draft", "canceled"):
         raise HTTPException(
@@ -296,7 +202,4 @@ async def delete_simulation(
             detail=f"Cannot delete simulation in '{existing.status}' status",
         )
 
-    sb = get_supabase()
-    sb.table("simulations").delete().eq(
-        "simulation_id", str(simulation_id)
-    ).execute()
+    sim_repo.delete(simulation_id, workspace_id)
