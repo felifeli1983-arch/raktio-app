@@ -46,6 +46,14 @@
 | 8E | log_context propagation across services | **PASS** |
 | 9 | Admin Panel API | **PASS** |
 | 10 | Team & Governance API | **PASS** |
+| 10.5A | Memory domain tables (migration 008) | NOT STARTED |
+| 10.5B | Post-run memory transformation service | NOT STARTED |
+| 10.5C | Memory-informed agent context | NOT STARTED |
+| 10.5D | Distribution: temporal activity multipliers | NOT STARTED |
+| 10.5E | Distribution: influence-weighted reach | NOT STARTED |
+| 10.5F | Source/Knowledge: tables + file upload | NOT STARTED |
+| 10.5G | Source/Knowledge: source-aware brief | NOT STARTED |
+| 10.5H | Platform behavior: action weight profiles | NOT STARTED |
 | 11 | Frontend Pages | NOT STARTED |
 | 12 | Integration Testing | NOT STARTED |
 
@@ -192,15 +200,18 @@ All other pages, components, stores, hooks, API clients are placeholder stubs.
 
 ## 6. Next Step
 
-### Step 7.5F — Compare Evidence Handoff
+### Step 10.5 — Reality Upgrade Block
 
-Wire real runtime evidence from both simulations' SQLite DBs into compare_service.
+A structured prerequisite block before frontend implementation.
 
-### After 7.5F:
-- 7.5G: Credit settlement from real execution
-- Step 8: Billing / Credits
-- Step 9: Admin Panel API
-- Step 10: Team & Governance API
+**Priority order:**
+1. **10.5A-C: Memory System** — episodic memory, memory transformation, memory-informed agents
+2. **10.5D-E: Distribution Layer** — temporal multipliers, influence-weighted reach
+3. **10.5F-G: Source/Knowledge** — file upload, source-aware brief understanding
+4. **10.5H: Platform Behavior** — per-platform action weight profiles
+
+**After 10.5:**
+- RP-02c: Report excellence hardening
 - Step 11: Frontend Pages
 - Step 12: Integration Testing
 

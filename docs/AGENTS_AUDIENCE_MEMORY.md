@@ -749,3 +749,9 @@ The backend population/memory system must support:
 - Schema supports `is_private` flag on audiences and `population_tier` on agents
 - Service logic does not yet enforce private audience rules
 - `find_global_agents()` correctly filters `is_global=True`, excluding private agents
+
+### Reality Upgrade Plan (defined 2026-04-14)
+- **Step 10.5A**: Memory domain tables — 5 tables from Domain 4
+- **Step 10.5B**: Post-run memory transformation — trace events → semantic episodes, relationship updates, topic exposure
+- **Step 10.5C**: Memory-informed agent context — feed accumulated memory into OASIS agent prompts for multi-run consistency
+- These three steps are the highest-priority realism upgrade. They transform agents from "persistent identity" to "persistent experience."

@@ -566,12 +566,25 @@
 ## Priority Summary
 
 ### HIGH priority items (remaining)
-1. **RP-02c**: Report excellence hardening
-2. **MEM-01**: Memory domain tables
-3. **MEM-02**: Post-run memory transformation
-4. **RT-01**: ARQ background worker
-5. **FE-01**: Workspace pages
-6. **FE-03**: Component files
+1. **MEM-01 / Step 10.5A**: Memory domain tables
+2. **MEM-02 / Step 10.5B**: Post-run memory transformation
+3. **Step 10.5C**: Memory-informed agent context
+4. **Step 10.5D**: Temporal activity multipliers
+5. **Step 10.5E**: Influence-weighted reach
+6. **RP-02c**: Report excellence hardening
+7. **RT-01**: ARQ background worker
+8. **FE-01**: Workspace pages
+9. **FE-03**: Component files
+
+### Reality Upgrade Block (Step 10.5) — NEW
+- **10.5A**: Memory domain tables (= MEM-01 execution) — HIGH
+- **10.5B**: Post-run memory transformation service (= MEM-02 execution) — HIGH
+- **10.5C**: Memory-informed agent context (new) — HIGH
+- **10.5D**: Temporal activity multipliers (= RT-03 execution) — HIGH
+- **10.5E**: Influence-weighted reach (new) — HIGH
+- **10.5F**: Source/Knowledge tables + file upload (= KS-01 + KS-02 execution) — MEDIUM
+- **10.5G**: Source-aware brief understanding (new) — MEDIUM
+- **10.5H**: Platform behavior action weight profiles (new) — MEDIUM
 
 ### MEDIUM priority items (remaining)
 - **RT-02**: Interview bridge

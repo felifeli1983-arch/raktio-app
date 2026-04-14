@@ -741,3 +741,9 @@ user, post, comment, like, dislike, follow, mute, report, rec, trace, comment_li
 - Group simulation features (5 group actions)
 - Replay/re-entry behavior
 - ARQ background worker dispatch (currently asyncio.create_task)
+
+### Reality Upgrade Plan — Distribution & Platform (defined 2026-04-14)
+- **Step 10.5D**: Temporal activity multipliers — daypart patterns affecting agent activation rates
+- **Step 10.5E**: Influence-weighted reach — publisher authority gradient in recsys/exposure
+- **Step 10.5H**: Platform behavior action weight profiles — per-platform action probabilities (Instagram: more likes less text, LinkedIn: professional framing, TikTok: rapid short reactions)
+- Currently OASIS runs all agents uniformly per step. These upgrades add temporal and social-structural realism.

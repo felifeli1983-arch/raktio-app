@@ -712,3 +712,8 @@ This is crucial to the user experience.
 
 ### Status model implemented
 All 13 states from the spec are supported: draft, understanding, planning, audience_preparing, cost_check, bootstrapping, running, paused, completing, reporting, completed, failed, canceled.
+
+### Reality Upgrade Plan — Source/Knowledge (defined 2026-04-14)
+- **Step 10.5F**: Source/Knowledge tables + file upload + parser — PDF/DOCX/TXT/MD/image ingestion
+- **Step 10.5G**: Source-aware brief understanding — extracted entities/context from uploaded files feed into Claude brief analysis
+- Phase 1 (brief ingestion) currently accepts text only. These steps expand it to document-based workflows.
