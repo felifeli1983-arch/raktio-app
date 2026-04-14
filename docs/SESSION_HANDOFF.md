@@ -429,6 +429,13 @@ This prerequisite block must complete before Step 8 begins.
   - Audience assembly: dedup safety net, coverage_pct in response
   - SimulationResponse includes audience_id for traceability
   - Deferred: per-segment stance assignment, private audience enforcement
+- **Step 7.5E1 — Evidence precision hardening** applied:
+  - `compute_belief_shift_indicators()`: per-agent behavioral stance (positive/negative/mixed/passive), reaction ratio, engagement targets
+  - `compute_exposure_history()`: per-agent/per-post exposure from refresh traces (richer than rec table snapshot)
+  - `compute_interaction_matrix()`: comment/like interaction edges, follow/mute edges, per-agent interaction summary
+  - All three wired into `build_evidence_bundle()` + report prompt sections
+  - Report sections for belief_shifts, exposure_analysis, faction_analysis now use real computed metrics
+  - Remaining inferred: NLP sentiment on post content, explicit stance DB updates (requires memory transformation step)
 
 **Step 7.5F — Compare evidence handoff**
 1. Compare reads real reports + runtime event counts from both runs
