@@ -239,6 +239,9 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 | No memory domain tables (5 tables) | Requires memory transformation service | Post-runtime step |
 | No knowledge/sources tables (4 tables) | Requires file processing pipeline | Later step |
 | `runtime_failure_records` separate table not created | Failures visible via admin/runtime from simulation_runs | LOW |
+| Memory topic extraction is hashtag-only (no NLP) | Posts without hashtags get no topic memory | MEM-02b |
+| Memory summary text is formulaic | No LLM synthesis — says "Participated in N simulation(s)" | MEM-02c |
+| Memory N+1 queries at scale | 1000+ agents = 1000+ individual DB queries | MEM-02f |
 | No subscription/plan change/payment API | Requires BIL-04 to BIL-08 | Post-launch |
 | Group actions (5) not enabled in OASIS | Group simulation features deferred | Later step |
 | No report_chat tables | Interactive report chat deferred | Later step |

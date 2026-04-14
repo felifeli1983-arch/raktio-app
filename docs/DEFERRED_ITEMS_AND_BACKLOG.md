@@ -221,6 +221,50 @@
 - **Recommended step**: Memory refinement pass
 - **Status**: DEFERRED
 
+### MEM-02c: LLM-based summary synthesis
+- **Area**: Memory
+- **Description**: Rolling summary text is formulaic ("Participated in N simulation(s). Last activity: X."). After many simulations, it doesn't capture evolution or nuance. An LLM call could synthesize episodic history into a richer, more human-readable summary.
+- **Why deferred**: Formulaic summary works for context injection. LLM synthesis adds cost per agent per run.
+- **Dependencies**: None
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Related files**: `services/memory_service.py` `_update_summaries()`
+- **Recommended step**: Memory refinement pass
+- **Status**: DEFERRED
+
+### MEM-02d: Episode dedup guard for re-runs
+- **Area**: Memory
+- **Description**: If `transform_run_to_memory()` is called twice for the same run (manual retry or bug), duplicate episodes are inserted. `simulation_count` would also double-increment. No guard checks if a transformation job already completed for this run.
+- **Why deferred**: Single-execution path works correctly. Dedup is a robustness improvement.
+- **Dependencies**: None
+- **Priority**: LOW
+- **Type**: Bug / robustness
+- **Related files**: `services/memory_service.py`
+- **Recommended step**: Memory refinement pass
+- **Status**: DEFERRED
+
+### MEM-02e: Relationship strength accumulation across runs
+- **Area**: Memory
+- **Description**: Currently each run resets `relationship_strength` to a value based on that run's interaction count. Across multiple runs, strength should accumulate (agents who interact in 5 simulations should have stronger relationships than one-run interactions). The upsert overwrites rather than accumulating.
+- **Why deferred**: Single-run relationships work. Accumulation requires reading existing strength before upsert.
+- **Dependencies**: None
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Related files**: `services/memory_service.py` `_update_relationships()`
+- **Recommended step**: Memory refinement pass
+- **Status**: DEFERRED
+
+### MEM-02f: N+1 query pattern in memory operations
+- **Area**: Memory / Performance
+- **Description**: Two N+1 query patterns exist: (1) `_build_agent_map()` calls `find_agent_by_id()` once per participant. (2) `_get_memory_context()` in config_builder calls 2 queries per agent. For 1000-agent simulations, this is 1000-2000 individual queries. Should use batch queries.
+- **Why deferred**: Small simulations (2-50 agents) work fine. Batch optimization needed for scale.
+- **Dependencies**: None
+- **Priority**: MEDIUM
+- **Type**: Performance
+- **Related files**: `services/memory_service.py`, `runtime/config_builder.py`
+- **Recommended step**: Scale optimization pass
+- **Status**: DEFERRED
+
 ### MEM-03: Belief trajectory over time
 - **Area**: Memory / Analytics
 - **Description**: OASIS trace rows don't have wall-clock timestamps per step (only rowid ordering and `created_at` in tables which resets per run). Per-step stance snapshots would require instrumenting the worker loop to record step boundaries.
