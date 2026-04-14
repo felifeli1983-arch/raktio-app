@@ -606,47 +606,72 @@
 
 ---
 
-## Priority Summary
+## Execution Timing
 
-### HIGH priority items (remaining)
-1. **MEM-01 / Step 10.5A**: Memory domain tables
-2. **MEM-02 / Step 10.5B**: Post-run memory transformation
-3. **Step 10.5C**: Memory-informed agent context
-4. **Step 10.5D**: Temporal activity multipliers
-5. **Step 10.5E**: Influence-weighted reach
-6. **RP-02c**: Report excellence hardening
-7. **RT-01**: ARQ background worker
-8. **FE-01**: Workspace pages
-9. **FE-03**: Component files
+Every deferred item must have a timing classification:
+- **DO NOW** — blocking or needed in the current implementation pass
+- **DO AFTER CURRENT BLOCK** — refinement batch after Step 10.5H completes
+- **DO BEFORE FRONTEND** — must be done before Step 11 (Frontend)
+- **CAN WAIT** — not needed before launch / production / frontend
 
-### Reality Upgrade Block (Step 10.5) — NEW
-- **10.5A**: Memory domain tables (= MEM-01 execution) — HIGH
-- **10.5B**: Post-run memory transformation service (= MEM-02 execution) — HIGH
-- **10.5C**: Memory-informed agent context (new) — HIGH
-- **10.5D**: Temporal activity multipliers (= RT-03 execution) — HIGH
-- **10.5E**: Influence-weighted reach (new) — HIGH
-- **10.5F**: Source/Knowledge tables + file upload (= KS-01 + KS-02 execution) — MEDIUM
-- **10.5G**: Source-aware brief understanding (new) — MEDIUM
-- **10.5H**: Platform behavior action weight profiles (new) — MEDIUM
+### Reality Upgrade Block — remaining (Step 10.5D-H)
+| Step | Item | Timing |
+|------|------|--------|
+| 10.5D | Temporal activity multipliers | DO NOW (next) |
+| 10.5E | Influence-weighted reach | DO NOW |
+| 10.5F | Source/Knowledge tables + upload | DO NOW |
+| 10.5G | Source-aware brief understanding | DO NOW |
+| 10.5H | Platform behavior profiles | DO NOW |
 
-### MEDIUM priority items (remaining)
-- **RT-02**: Interview bridge
-- **RP-01**: Report evidence links table
-- **RP-02**: Report chat (interactive)
-- **RP-02b**: Report section generation fragility
-- **RP-04**: NLP sentiment analysis
-- **POP-01**: Per-segment stance assignment
-- **POP-03**: Agent Atlas API
-- **KS-01**: Knowledge domain tables
-- **KS-02**: File upload
-- **BIL-04**: Subscriptions table
-- **BIL-07**: Plan change API
-- **BIL-08**: Payment provider integration
-- **ADM-05**: Workspace create/rename/archive API
-- **INF-02**: Object storage adapter
+### Refinement Batch — Step 10.6 (after 10.5H, before Frontend)
+Post-10.5 refinement pass to harden quality before frontend work.
+| Item | Description | Timing |
+|------|-------------|--------|
+| RP-02c | Report excellence hardening | DO AFTER CURRENT BLOCK |
+| MEM-02b | LLM-based topic extraction | DO AFTER CURRENT BLOCK |
+| MEM-02c | LLM-based summary synthesis | DO BEFORE FRONTEND |
+| MEM-02e | Relationship strength accumulation | DO BEFORE FRONTEND |
+| RP-02b | Report section fragility fix | DO AFTER CURRENT BLOCK |
+| POP-01 | Per-segment stance assignment | DO BEFORE FRONTEND |
+| POP-03 | Agent Atlas API | DO BEFORE FRONTEND |
 
-### LOW priority items (remaining)
-RT-03, RT-04, RT-05, RP-03, RP-05, POP-02, POP-04, BIL-05, BIL-05b, BIL-05c, BIL-05e, BIL-06, ADM-03b, ADM-06, FE-02, FE-04, INF-01, INF-03, DM-01, DM-02
+### Items that CAN WAIT (post-frontend / production)
+| Item | Description |
+|------|-------------|
+| MEM-02d | Episode dedup guard |
+| MEM-02f | N+1 query pattern (scale) |
+| MEM-03 | Belief trajectory over time |
+| RT-01 | ARQ background worker |
+| RT-02 | Interview bridge |
+| RT-04 | Group simulation actions |
+| RT-05 | Runtime health endpoint |
+| RP-01 | Report evidence links table |
+| RP-02 | Report chat |
+| RP-03 | Report PDF export |
+| RP-04 | NLP sentiment analysis |
+| RP-05 | Compare geo/segment deltas |
+| POP-02 | Private audience enforcement |
+| POP-04 | Audience create/edit/duplicate |
+| BIL-04 | Subscriptions table |
+| BIL-05 | Credit purchases table |
+| BIL-05b | LLM usage analytics API |
+| BIL-05c | Cost-based pricing recs |
+| BIL-05e | LLM log attribution gaps |
+| BIL-06 | Add-on modular pricing |
+| BIL-07 | Plan change API |
+| BIL-08 | Payment provider |
+| ADM-03b | runtime_failure_records |
+| ADM-05 | Workspace CRUD API |
+| ADM-06 | Object visibility policies |
+| INF-01 | Stream adapter (push) |
+| INF-02 | Object storage adapter |
+| INF-03 | Semantic search adapter |
+| INF-04 | Superseded stubs cleanup |
+| INF-05 | LLM streaming |
+| DM-01 | Simulation events index |
+| DM-02 | Simulation bookmarks |
+| FE-02 | Admin pages |
+| FE-04 | Admin route blocking |
 
-### DONE items (completed in previous steps)
-BIL-01, BIL-02, BIL-03, BIL-05d, ADM-01, ADM-02, ADM-03, ADM-04
+### DONE items
+MEM-01, MEM-02, BIL-01, BIL-02, BIL-03, BIL-05d, ADM-01, ADM-02, ADM-03, ADM-04

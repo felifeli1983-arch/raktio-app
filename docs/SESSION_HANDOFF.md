@@ -210,8 +210,9 @@ A structured prerequisite block before frontend implementation.
 3. **10.5F-G: Source/Knowledge** — file upload, source-aware brief understanding
 4. **10.5H: Platform Behavior** — per-platform action weight profiles
 
-**After 10.5:**
-- RP-02c: Report excellence hardening
+**After 10.5H:**
+- Step 10.6: Refinement batch (report hardening, LLM topic extraction,
+  per-segment stance, Agent Atlas API, summary synthesis, relationship accumulation)
 - Step 11: Frontend Pages
 - Step 12: Integration Testing
 
