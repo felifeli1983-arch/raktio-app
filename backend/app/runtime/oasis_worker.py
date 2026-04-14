@@ -223,20 +223,32 @@ async def run_oasis_simulation(
     }
 
     try:
-        for step_num in range(1, duration_steps + 1):
-            logger.info(f"Step {step_num}/{duration_steps}")
+        from app.runtime.temporal import select_active_agents, get_step_metadata
 
-            # All agents perform LLM actions
-            all_llm_actions = {
+        for step_num in range(1, duration_steps + 1):
+            # Temporal activity: select which agents act this step
+            all_agents = list(env.agent_graph.get_agents())
+            active_agents = select_active_agents(
+                all_agents, step_num, start_hour=8, min_active=1,
+            )
+            step_meta = get_step_metadata(step_num, start_hour=8)
+
+            logger.info(
+                f"Step {step_num}/{duration_steps} "
+                f"[{step_meta['daypart']} {step_meta['simulated_hour']:02d}:00] "
+                f"— {len(active_agents)}/{len(all_agents)} agents active"
+            )
+
+            # Only active agents perform LLM actions this step
+            step_actions = {
                 agent: LLMAction()
-                for _, agent in env.agent_graph.get_agents()
+                for _, agent in active_agents
             }
 
-            await env.step(all_llm_actions)
+            await env.step(step_actions)
 
             execution_summary["steps_completed"] = step_num
 
-            # Update progress every step
             simulated_time = f"{step_num}h"
             _update_progress(run_id, step_num, duration_steps, simulated_time)
 

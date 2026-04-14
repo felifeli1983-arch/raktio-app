@@ -194,6 +194,7 @@ def _extract_episodes(
                     f"Behavioral stance: {stance}. "
                     f"Likes: {ind.get('likes_given', 0)}, Dislikes: {ind.get('dislikes_given', 0)}."
                 ),
+                "topic_tags": [],
                 "importance_score": 0.6,
             })
 
@@ -204,6 +205,7 @@ def _extract_episodes(
                 "agent_id": agent_id, "simulation_id": simulation_id, "run_id": run_id,
                 "episode_type": "followed_agent",
                 "episode_text": f"Followed {edge.get('followee', 'another agent')}.",
+                "topic_tags": [],
                 "importance_score": 0.3,
             })
 
@@ -214,6 +216,7 @@ def _extract_episodes(
                 "agent_id": agent_id, "simulation_id": simulation_id, "run_id": run_id,
                 "episode_type": "muted_agent",
                 "episode_text": f"Muted {edge.get('mutee', 'another agent')}.",
+                "topic_tags": [],
                 "importance_score": 0.5,
             })
 
