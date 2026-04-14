@@ -71,6 +71,16 @@
 - **Description**: High-influence agents (influence_weight ≥2.0) get ×1.2 activation boost in temporal selection + "high influence" label in OASIS description. Low-influence agents (≤0.5) get ×0.8 reduction + "low influence" label. Combined with activity level and daypart. Probabilistic, not deterministic.
 - **Status**: DONE (Step 10.5E)
 
+### DIST-01b: Direct recsys influence weighting
+- **Area**: Distribution
+- **Description**: Current influence reach works through temporal activation (more active) and LLM behavioral guidance (more authoritative content). True reach asymmetry would require modifying OASIS's recsys to weight post recommendations by author's `influence_weight`. This means either: (a) forking OASIS Platform to add author-weight to rec scoring, or (b) implementing a custom recsys function that considers author influence. ManualAction like-injection was attempted but proved fragile (OASIS internal state conflicts).
+- **Why deferred**: Requires OASIS Platform modification or custom recsys. Current dual-channel approach (temporal + LLM guidance) produces observable behavioral differences.
+- **Dependencies**: OASIS source modification
+- **Priority**: MEDIUM
+- **Type**: Architecture follow-up
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
 ### DIST-02: Platform algorithm behavior modeling
 - **Area**: Distribution
 - **Description**: OASIS recsys options (random, reddit, personalized, twhin-bert) don't model platform-specific algorithmic promotion (trending boost, engagement-based amplification, recency decay). Content that gets early engagement should be promoted more.
