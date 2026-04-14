@@ -478,26 +478,15 @@
 
 ## Knowledge / Sources
 
-### KS-01: Knowledge domain tables
+### KS-01: Knowledge domain tables ✅ DONE
 - **Area**: Knowledge
-- **Description**: 4 tables from DATA_MODEL_AND_STORAGE.md Domain 6 not created: `sources`, `source_files`, `source_extractions`, `source_links`. No file upload, parsing, or source-to-simulation linking.
-- **Why deferred**: Brief ingestion currently accepts text only. File processing requires parser adapter + storage adapter.
-- **Dependencies**: Storage adapter, parser adapter
-- **Priority**: MEDIUM
-- **Type**: Missing feature
-- **Related files**: `DATA_MODEL_AND_STORAGE.md` Domain 6, `adapters/parser_adapter.py` (stub), `adapters/storage_adapter.py` (stub)
-- **Recommended step**: Dedicated knowledge step
-- **Status**: DEFERRED
+- **Description**: 3 tables live (migration 009, 28 total): `sources`, `source_extractions`, `source_links`. Repository + service + 4 API endpoints. `source_files` merged into `sources` (raw_text stored directly). LLM extraction via Claude PLANNING.
+- **Status**: DONE (Step 10.5F)
 
-### KS-02: File/image upload in brief ingestion
+### KS-02: File/image upload in brief ingestion ✅ DONE
 - **Area**: Knowledge
-- **Description**: DATAFLOW_AND_RUNTIME.md Phase 1 says brief ingestion should accept "images, PDFs, DOCX/TXT/MD files". Only `brief_text` is supported.
-- **Why deferred**: Requires KS-01 tables + parser adapter + storage adapter.
-- **Dependencies**: KS-01
-- **Priority**: MEDIUM
-- **Type**: Missing feature
-- **Related files**: `services/brief_service.py`, `DATAFLOW_AND_RUNTIME.md`
-- **Recommended step**: Same as KS-01
+- **Description**: `knowledge_service.upload_source()` accepts file upload (PDF/DOCX/TXT/MD) or raw text. Text extraction + LLM extraction. Source-to-simulation linking. `brief_service.understand_brief()` now injects linked source context (summaries, entities, topics, key claims) into the LLM prompt. Image support still deferred (KS-03).
+- **Status**: DONE (Step 10.5F-G)
 - **Status**: DEFERRED
 
 ---
@@ -880,6 +869,15 @@ Post-10.5 refinement pass to harden quality before frontend work.
 | DM-02 | Simulation bookmarks |
 | FE-02 | Admin pages |
 | FE-04 | Admin route blocking |
+
+### KS-03: Image source support
+- **Area**: Knowledge
+- **Description**: Source upload supports text/PDF/DOCX but not images. DATAFLOW_AND_RUNTIME.md mentions image upload as a brief ingestion input. Would require vision model (Claude vision) to extract meaning from images.
+- **Why deferred**: Text-based sources cover the primary use case. Image analysis requires different LLM capabilities.
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
 
 ### New findings from deep audit (2026-04-14)
 
