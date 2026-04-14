@@ -701,3 +701,43 @@ The simulation engine must:
 ## Final rule for Claude
 
 **Treat the simulation engine as the real behavioral core of Raktio. Configure and extend OASIS for persistent synthetic users, multi-platform model 1, deep geography, simulated time, rich exposure logic, and interviewable agents—but never collapse it into a simplified fake content generator.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### OASIS integration
+- **OASIS v0.2.5** verified importable on Python 3.12 (despite pyproject.toml <3.12 constraint)
+- **Dependencies installed**: camel-ai 0.2.78, torch (CPU), sentence-transformers, igraph, neo4j
+- **Model backend**: `ModelFactory.create(OPENAI_COMPATIBLE_MODEL, "deepseek-chat", api_key, url)` — DeepSeek for RUNTIME route
+- **Execution**: `oasis.make()` → `env.reset()` → `env.step({agent: LLMAction()})` × N → `env.close()`
+- **Tested**: 3-agent, 6-step run produces 6 posts, 7 comments, 2 likes, 33 trace entries
+
+### Action set (21 of 31 enabled)
+- **Content**: CREATE_POST, CREATE_COMMENT, REPOST, QUOTE_POST
+- **Post reactions**: LIKE/UNLIKE/DISLIKE/UNDO_DISLIKE_POST
+- **Comment reactions**: LIKE/UNLIKE/DISLIKE/UNDO_DISLIKE_COMMENT
+- **Relationships**: FOLLOW, UNFOLLOW, MUTE, UNMUTE
+- **Discovery**: SEARCH_POSTS, SEARCH_USER, TREND
+- **Moderation**: REPORT_POST
+- **Passive**: DO_NOTHING
+- **Excluded**: REFRESH, SIGNUP, UPDATE_REC_TABLE, EXIT (internal); INTERVIEW (manual); PURCHASE_PRODUCT (not social); 5 group actions (deferred)
+
+### Status lifecycle (authoritative)
+```
+simulations.status: draft → cost_check → bootstrapping → running → completing → completed
+                                                        ↘ failed / canceled / paused
+simulation_runs.status: bootstrapping → running → completing → completed
+                                                 ↘ failed / canceled / paused
+```
+
+### Runtime SQLite schema (17 tables verified)
+user, post, comment, like, dislike, follow, mute, report, rec, trace, comment_like, comment_dislike, chat_group, group_members, group_messages, product, sqlite_sequence
+
+### What is NOT yet implemented
+- Interview bridge (stub)
+- Temporal activity multipliers (daypart patterns)
+- Group simulation features (5 group actions)
+- Replay/re-entry behavior
+- ARQ background worker dispatch (currently asyncio.create_task)

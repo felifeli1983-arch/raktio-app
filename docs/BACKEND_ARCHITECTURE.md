@@ -792,3 +792,32 @@ The backend must:
 ## Final rule for Claude
 
 **Build the backend as a modular orchestration and product services layer around OASIS. FastAPI and service modules should coordinate the user workflow, runtime execution, memory transformation, reporting, and billing while keeping OASIS as the live simulation engine and SQLite as the per-run operational truth.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Module implementation
+
+| Module | Status | Key files |
+|--------|--------|-----------|
+| `api/` | 5 routers implemented (simulations 12 endpoints, reports 3, compare 3, audiences 3, stream 1). 5 stubs remain (agents, knowledge, billing, team, admin). | `api/simulations.py`, `api/reports.py`, `api/compare.py`, `api/audiences.py`, `api/stream.py` |
+| `services/` | 7 implemented (simulation, brief, planner, agent, audience, report, compare). 5 stubs (billing, knowledge, memory, runtime_bridge, admin). | Services use repository pattern exclusively. |
+| `runtime/` | 5 implemented (oasis_worker, config_builder, launcher, supervisor, event_bridge, state_reader). 2 stubs (interview_bridge, health). | `oasis_worker.py` runs real OASIS env.step() loop. |
+| `repositories/` | 5 implemented (simulations, agents, billing, reports, compare). 4 stubs. | All services route through repositories. |
+| `schemas/` | 4 implemented (simulation, audience, report, compare). 4 stubs. | |
+| `adapters/` | 2 implemented (llm_adapter with Anthropic+DeepSeek). stream_adapter DEFERRED. 4 stubs. | |
+| `auth/` | guards.py fully implemented, permissions.py fully implemented. | 4 FastAPI dependencies + 10 permission functions. |
+| `billing/` | Stubs. Credit rules not yet implemented. | |
+| `admin/` | Stubs. | |
+| `workers/` | Stubs. OASIS currently runs via asyncio.create_task, not ARQ. | |
+
+### Architecture pattern compliance
+- **API layer thin**: ✓ validates auth, calls services
+- **Services own orchestration**: ✓ all business logic in services
+- **Services use repositories**: ✓ zero direct DB calls in services
+- **Adapters isolate externals**: ✓ LLM routing via llm_adapter
+- **Repository pattern**: ✓ established and enforced across all implemented services
+
+### Total API endpoints: 22 implemented

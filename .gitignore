@@ -30,3 +30,7 @@ MiroFish-main/
 /tmp/raktio-runs/
 *.sqlite
 *.db
+
+# === OASIS runtime logs ===
+backend/log/
+log/

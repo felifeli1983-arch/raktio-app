@@ -687,3 +687,28 @@ This is crucial to the user experience.
 ## Final rule for Claude
 
 **Always preserve the real simulation pipeline. A Raktio run must move from brief ingestion to planning, audience sourcing, runtime configuration, OASIS execution, live streaming, memory transformation, report generation, compare/rerun, and persistent storage in a coherent end-to-end flow. Never fake intermediate stages or collapse the runtime into a static generation process.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Pipeline phase implementation
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 1 | Brief ingestion | ✓ `brief_text` stored. File/image upload not implemented. |
+| 2 | Brief understanding | ✓ Claude Sonnet PLANNING → structured JSON → `brief_context_json` |
+| 3 | Simulation planning | ✓ Claude Sonnet PLANNING → `planner_recommendation_json` in `simulation_configs` |
+| 4 | Audience sourcing | ✓ Global pool + LLM generation → audience + memberships + participations |
+| 5 | Config finalization | ✓ `config_builder.py` → `final_runtime_config_json` saved |
+| 6 | Run bootstrap | ✓ Launcher creates run workspace, SQLite path, run record |
+| 7 | OASIS execution | ✓ `oasis_worker.py` runs real `env.step()` loop with DeepSeek LLM |
+| 8 | Live streaming | ✓ SSE stream from trace table, 2s polling, dual auth |
+| 9 | Memory transformation | NOT IMPLEMENTED (no memory tables or services) |
+| 10 | Report generation | ✓ 14 progressive sections, evidence-backed from OASIS SQLite |
+| 11 | Compare/rerun | ✓ Structured comparison (completed sims only). Rerun/clone not implemented. |
+| 12 | Cross-run persistence | NOT IMPLEMENTED (depends on memory system) |
+
+### Status model implemented
+All 13 states from the spec are supported: draft, understanding, planning, audience_preparing, cost_check, bootstrapping, running, paused, completing, reporting, completed, failed, canceled.

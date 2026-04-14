@@ -663,3 +663,26 @@ This module must support:
 ## Final rule for Claude
 
 **Treat the synthetic population as one of Raktio’s core assets. Audience Studio and Agent Atlas must make the population inspectable, reusable, persistent, realistic, and productively useful. Never design agents as throwaway runtime artifacts or reduce audiences to shallow demographic filters only.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Audience Studio
+- **GET /api/audiences**: list (paginated, workspace-scoped) ✓
+- **GET /api/audiences/{id}**: single audience ✓
+- **DELETE /api/audiences/{id}**: soft archive ✓
+- **Auto-generated audiences**: created during `prepare-audience` flow ✓
+- **Missing**: create/edit/duplicate endpoints, filter-based selection, source-derived audiences, clone-and-edit
+
+### Agent Atlas
+- **NOT IMPLEMENTED** — `api/agents.py` is a stub
+- No browsing, filtering, or profile viewing API
+- Agents exist in the database with full profiles but have no public API surface
+
+### Population quality hardening (Step 7.5E0)
+- Profile validation on LLM output (skip nameless, force country, clamp enums)
+- Platform presence sourcing (agents matched by platform_presence join)
+- Cross-country deduplication (exclude_ids parameter)
+- Coverage quality metrics in audience preparation response

@@ -636,3 +636,34 @@ The minimum viable governance architecture should support:
 ## Final rule for Claude
 
 **Design permissions and governance as a first-class part of Raktio, not an afterthought. Every important object must have a clear scope, every sensitive action must be auditable, and workspace/org/admin boundaries must be explicit. Support collaboration, private audiences, billing separation, and enterprise control without turning the product into permission chaos.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Roles implemented
+7 roles enforced via `workspace_memberships.role` CHECK constraint:
+viewer, contributor, editor, workspace_admin, billing_admin, org_admin, platform_admin
+
+### Permission module
+`auth/permissions.py` implements 10 reusable role-check functions:
+- `can_create_simulation(role)` — contributors+
+- `can_edit_simulation(role)` — contributors+
+- `can_delete_simulation(role)` — editors+
+- `can_launch_simulation(role)` — contributors+
+- `can_view_billing(role)` — billing_admin+
+- `can_manage_billing(role)` — billing_admin+
+- `can_manage_members(role)` — workspace_admin+
+- `can_access_admin(role)` — platform_admin only
+- `can_manage_org(role)` — org_admin+
+- `can_view_simulation(role)` — all members
+
+### What is NOT yet implemented
+- `api/team.py` — stub (no member invite, role change, workspace management)
+- `require_admin()` — delegates to `require_user()` (no platform_admin DB check)
+- Admin frontend route blocking (relies on backend 403)
+- Object visibility policies (per-object visibility stored/enforced)
+- Audit logs table
+- Source governance
+- Sharing model

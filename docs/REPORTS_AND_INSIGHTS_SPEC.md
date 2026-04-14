@@ -639,3 +639,36 @@ A Raktio report must:
 ## Final rule for Claude
 
 **Treat the reporting system as one of Raktio’s core product pillars. Reports must be evidence-backed, structured, interactive, and tightly connected to the live simulation, the memory layer, and compare workflows. Never reduce them to generic LLM summaries or decorative analytics pages.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Report generation
+- **Progressive 14-section generation** via Claude Sonnet (REPORT route)
+- **Sections**: executive_summary, simulation_context, outcome_scorecard, key_findings, belief_shifts, patient_zero, segment_analysis, geography_analysis, platform_analysis, exposure_analysis, faction_analysis, recommendations, evidence, confidence_limitations
+- **Evidence-backed**: reports receive real runtime evidence from OASIS SQLite via `build_evidence_bundle()`
+
+### Evidence pipeline feeding reports
+| Evidence source | Implemented | Used in prompt |
+|----------------|-------------|----------------|
+| Event counts (posts, comments, likes, etc.) | ✓ | ✓ |
+| Action summary (trace action types) | ✓ | ✓ |
+| Top posts (with content + engagement) | ✓ | ✓ |
+| Sample comments (with content + attribution) | ✓ | ✓ |
+| Per-agent activity breakdown | ✓ | ✓ |
+| Belief shift indicators (behavioral stance, reaction ratio) | ✓ | ✓ |
+| Exposure history (from refresh traces) | ✓ | ✓ |
+| Interaction matrix (comment/like/follow/mute edges) | ✓ | ✓ |
+| Post reach (per-post exposure to agents) | ✓ | ✓ |
+| NLP sentiment analysis on content | Not implemented | Not used |
+| Interview outputs | Not implemented | Not used |
+
+### What is NOT yet implemented
+- `report_evidence_links` table (linking sections to specific evidence items)
+- `report_chat_threads` / `report_chat_messages` tables (interactive report chat)
+- NLP-based sentiment classification on post/comment content
+- Interview-informed report sections
+- Export to PDF
+- Share via link

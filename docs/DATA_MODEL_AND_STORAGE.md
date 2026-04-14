@@ -820,3 +820,52 @@ The minimum persistent schema should cover:
 ## Final rule for Claude
 
 **Model Raktio storage as a deliberate split between SQLite runtime truth, Postgres product persistence, and object/file storage. Keep persistent product entities explicit, normalized enough for filtering and drill-down, and separate identity, runtime participation, memory, reporting, billing, and admin concerns cleanly.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Tables implemented (18 of ~46 conceptual tables)
+
+| Domain | Table | Status |
+|--------|-------|--------|
+| Identity/Tenancy | users | Live (with email column added in migration 002) |
+| | organizations | Live |
+| | workspaces | Live |
+| | workspace_memberships | Live (7 roles enforced via CHECK) |
+| Simulations | simulations | Live (13-state status, audience_id column added 005) |
+| | simulation_configs | Live (versioned, planner + runtime config) |
+| | simulation_runs | Live (status lifecycle: bootstrapping→running→completed) |
+| Population | agents | Live (avatar_seed GENERATED ALWAYS AS username) |
+| | agent_platform_presence | Live |
+| | audiences | Live (migration 003) |
+| | audience_memberships | Live (migration 003) |
+| | simulation_participations | Live (migration 003) |
+| Billing | plans | Live (pricing fields added migration 002) |
+| | credit_balances | Live (auto-created via trigger) |
+| | credit_ledger | Live (append-only, reservation + refund events) |
+| Reports | reports | Live (migration 004) |
+| | report_sections | Live (14 section types, migration 005 expanded) |
+| Compare | compare_runs | Live (migration 004) |
+
+### Tables NOT yet implemented
+- simulation_events_index, simulation_bookmarks
+- agent_memory_summaries, agent_episodic_memory, agent_relationship_memory, agent_topic_exposure, memory_update_jobs
+- reports evidence_links, report_chat_threads, report_chat_messages
+- sources, source_files, source_extractions, source_links
+- subscriptions, credit_purchases
+- audit_logs, tenant_flags, model_routing_policies, runtime_failure_records
+
+### Migrations applied
+1. `001_initial_schema.sql` — 12 core tables + RLS + triggers
+2. `002_add_user_email_and_plan_pricing.sql` — email column, pricing fields
+3. `003_audiences_and_participation.sql` — audiences, memberships, participations
+4. `004_reports_and_compare.sql` — reports, report_sections, compare_runs
+5. `005_report_sections_expand.sql` — expanded section_key CHECK, audience_id on simulations
+
+### Storage split implementation
+- **SQLite per-run**: implemented via `oasis_worker.py` → OASIS creates SQLite at runtime
+- **Supabase/Postgres**: 18 tables live with RLS
+- **Object storage**: not yet implemented
+- **Semantic/search index**: not yet implemented (pgvector extension enabled but unused)

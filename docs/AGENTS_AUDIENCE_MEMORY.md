@@ -712,3 +712,40 @@ The backend population/memory system must support:
 ## Final rule for Claude
 
 **Design the agent/audience/memory layer as a persistent synthetic population system, not as temporary runtime output. Separate identity, platform presence, audience membership, run participation, and memory into explicit backend models. Reuse first, expand only when needed, and keep memory structured, additive, and explainable.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Persistent Agent system
+- **agents table**: live with all specified fields (identity, geography, demographics, psychographics, platform presence)
+- **avatar_seed**: `GENERATED ALWAYS AS (username) STORED` — enforced at DB level
+- **Username uniqueness**: UNIQUE constraint + pre-insert check + retry
+- **Agent generation**: LLM-based via Claude Sonnet PLANNING, with profile validation (name required, country forced, enums clamped)
+- **agent_platform_presence**: live, populated during generation
+
+### Audience system
+- **audiences, audience_memberships**: live (migration 003)
+- **Audience assembly**: reuse-first from global pool → generate gaps
+- **Platform presence filtering**: pool sourcing filters by required platforms
+- **Cross-country dedup**: exclude_ids prevents same agent sourced twice
+- **Coverage quality metrics**: coverage_pct, total_assembled in response
+- **audience_id linked to simulation**: via simulations.audience_id column
+
+### Simulation participation
+- **simulation_participations**: live (migration 003)
+- **Stance assignment**: global random from stance_distribution (per-segment bias deferred)
+- **active_platforms_json**: set from simulation platform_scope
+
+### Memory system
+- **NOT YET IMPLEMENTED**
+- No memory tables (agent_memory_summaries, episodic_memory, relationship_memory, topic_exposure, memory_update_jobs)
+- No post-run memory transformation
+- runtime_stance never updated after initial assignment
+- This is the most significant gap for persistent agent evolution
+
+### Private audiences
+- Schema supports `is_private` flag on audiences and `population_tier` on agents
+- Service logic does not yet enforce private audience rules
+- `find_global_agents()` correctly filters `is_global=True`, excluding private agents

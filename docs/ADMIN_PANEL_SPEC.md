@@ -623,3 +623,19 @@ They should not read raw runtime internals directly unless through safe, normali
 ## Final rule for Claude
 
 **Design the admin panel as Raktio’s operational control plane. It must support platform health, simulation oversight, pricing and credit governance, tenant management, population health, model/cost control, and audited intervention workflows. Never reduce it to a simple CRUD dashboard.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Status: NOT STARTED
+
+- `api/admin.py` is a stub
+- `admin_service.py` is a stub
+- `admin/oversight.py` and `admin/audits.py` are stubs
+- No `audit_logs` or `runtime_failure_records` tables
+- `require_admin()` in `guards.py` delegates to `require_user()` (no platform_admin role check)
+- Frontend admin pages (11 files) are placeholder stubs
+
+### Planned for Step 9

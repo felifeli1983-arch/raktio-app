@@ -665,3 +665,34 @@ The commercial system must support:
 ## Final rule for Claude
 
 **Design pricing and credits as a transparent simulation-capability system, not as raw token resale. The strongest cost driver is agent count, followed by platform count, simulated time, geography scope, and add-ons. Plans should bundle credits and scale access cleanly, while packs and enterprise paths handle overflow and advanced needs.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Plans table
+- 5 plans seeded: starter (2500 agents, €49/mo), growth (5000, €149/mo), business (10000, €399/mo), scale (50000, €999/mo), enterprise (custom)
+- Fields: plan_id, name, agent_limit, monthly_price, annual_price, included_credits, bonus_credits, is_enterprise, feature_flags
+
+### Credit lifecycle
+| Event | Implemented |
+|-------|-------------|
+| Estimation at draft time | ✓ (agents × duration_multiplier, soft check) |
+| Reservation at launch | ✓ (deduct from available, add to reserved, ledger entry) |
+| Refund on cancel | ✓ (restore available, reduce reserved, ledger entry) |
+| Finalization at completion | NOT YET (Step 7.5G) |
+| Pack purchases | NOT YET (Step 8) |
+| Plan changes | NOT YET (Step 8) |
+
+### Credit formula
+- **Current**: `agents × duration_multiplier` only
+- **Missing**: platform_count factor, geography_scope factor, add-on modular pricing
+- Full formula per docs: audience_size (strong) + platform_count (medium-strong) + duration (medium) + geography (light-medium) + add-ons (modular)
+
+### Tables
+- `credit_balances`: live (per-organization, available + reserved)
+- `credit_ledger`: live (append-only, event_type CHECK constraint)
+- `plans`: live (with pricing fields from migration 002)
+- `subscriptions`: NOT YET CREATED
+- `credit_purchases`: NOT YET CREATED

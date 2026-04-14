@@ -846,3 +846,32 @@ Overview -> Billing / Team -> Admin / Cost Control / Tenant Management
 ## Final rule for Claude
 
 **Treat the app as a simulation intelligence workspace, not a generic SaaS with a few dashboard pages. The page system must revolve around New Simulation, the Simulation Canvas, Reports, Compare workflows, persistent audiences, persistent agents, and clear separation between user workspace and admin/enterprise operations.**
+
+
+---
+
+## Implementation Status (as of 2026-04-14)
+
+### Pages implemented
+| Route | Status |
+|-------|--------|
+| `/login` | ✓ Real Supabase signInWithPassword |
+| `/signup` | ✓ Real Supabase signUp + email confirmation |
+
+### Pages as placeholder stubs (~35)
+| Route group | Count | Status |
+|-------------|-------|--------|
+| `(app)` — workspace pages | 15 | Stubs (title + subtitle only) |
+| `(admin)` — admin pages | 11 | Stubs |
+
+### Middleware
+- ✓ Route protection via `middleware.ts`
+- Auth pages: redirect to `/overview` if signed in
+- App pages: redirect to `/login?next=` if not signed in
+- Admin pages: no client-side block (relies on backend 403)
+
+### Components
+- ~40 component files are placeholder stubs
+- `useSimulationStream.ts` hook is implemented (EventSource with reconnection)
+
+### Planned for Step 11
