@@ -146,14 +146,33 @@ async def require_workspace_member(
     user: AuthUser = Depends(require_user),
 ) -> WorkspaceContext:
     """
-    Dependency: require the caller to be an active workspace member.
-    Full DB membership lookup will be wired in when supabase_client is ready.
-    TODO: query workspace_memberships via service_role client.
+    Dependency: require the caller to be an active member of the given workspace.
+    Queries workspace_memberships via service_role client (bypasses RLS).
+    Returns WorkspaceContext with the actual member role, or raises 403.
     """
+    from app.db.supabase_client import get_supabase
+
+    sb = get_supabase()
+    result = (
+        sb.table("workspace_memberships")
+        .select("role")
+        .eq("workspace_id", str(workspace_id))
+        .eq("user_id", str(user.user_id))
+        .eq("status", "active")
+        .limit(1)
+        .execute()
+    )
+
+    if not result.data:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this workspace",
+        )
+
     return WorkspaceContext(
         user=user,
         workspace_id=workspace_id,
-        member_role="contributor",  # TODO: resolve from DB
+        member_role=result.data[0]["role"],
     )
 
 
