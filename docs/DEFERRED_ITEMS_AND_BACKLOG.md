@@ -88,6 +88,17 @@
 - **Recommended step**: Post-Step 8
 - **Status**: DEFERRED
 
+### RP-02b: Report section generation fragility
+- **Area**: Reports
+- **Description**: With 14 sections, later sections receive a very large prompt (all previous sections' markdown is included for coherence). This can cause: JSON parsing failures, token limit issues, or LLM refusals. Stress test showed 11/14 sections succeeded (3 failed). The system is fault-tolerant (failed sections don't block others), but the failure rate needs improvement.
+- **Why deferred**: The core pipeline works. Optimization is a refinement task: truncate previous sections more aggressively, or omit them for independent sections.
+- **Dependencies**: None
+- **Priority**: MEDIUM
+- **Type**: Bug / fragility
+- **Related files**: `services/report_service.py` `_generate_section()` prompt construction
+- **Recommended step**: Report refinement pass
+- **Status**: DEFERRED
+
 ### RP-03: Report PDF export
 - **Area**: Reports
 - **Description**: No PDF generation from report sections. REPORTS_AND_INSIGHTS_SPEC.md lists export as a key action.
