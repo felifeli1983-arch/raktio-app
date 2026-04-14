@@ -27,7 +27,7 @@ from app.schemas.simulation import (
     SimulationResponse,
     SimulationUpdate,
 )
-from app.services import brief_service, planner_service, simulation_service
+from app.services import audience_service, brief_service, planner_service, simulation_service
 
 router = APIRouter()
 
@@ -112,6 +112,25 @@ async def understand_simulation(
     return await brief_service.understand_brief(
         simulation_id=simulation_id,
         workspace_id=ctx.workspace_id,
+    )
+
+
+@router.post("/{simulation_id}/prepare-audience")
+async def prepare_audience(
+    simulation_id: uuid.UUID,
+    ctx: WorkspaceContext = Depends(require_workspace_member),
+):
+    """Assemble the simulation audience from global pool + new generation."""
+    if not can_create_simulation(ctx.member_role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Viewers cannot prepare audiences",
+        )
+
+    return await audience_service.prepare_audience(
+        simulation_id=simulation_id,
+        workspace_id=ctx.workspace_id,
+        user_id=ctx.user.user_id,
     )
 
 
