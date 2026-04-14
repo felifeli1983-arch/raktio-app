@@ -219,12 +219,55 @@
 - **Description**: TikTok profile: rapid/trendy/slang, high share, peak shift -2h. Prompt: "React fast, use trendy language, be authentic."
 - **Status**: DONE (Step 10.5H) — prompt-level approximation.
 
-### PLAT-04: Full OASIS platform engines (beyond prompt approximation)
+### PLAT-04: Engine-level platform realism (official future requirement)
 - **Area**: Platform
-- **Description**: Current platform behavior is prompt-level approximation only — all non-Reddit platforms run on Twitter OASIS backend. True platform engine differentiation would require: custom OASIS Platform implementations per platform (different action weight probabilities, different content format constraints, different recsys behaviors). This is a significant engineering effort.
-- **Why deferred**: Prompt-level approximation creates meaningful behavioral differentiation. Full engine changes require OASIS fork.
+- **Description**: Making LinkedIn, Instagram, and TikTok progressively engine-level platforms, not only prompt-level approximations. This is an official future requirement for Raktio — the product must eventually have real behavioral differentiation at the runtime engine level, not just LLM prompt guidance.
+- **Current state**: X and Reddit are engine-level (natively supported by OASIS DefaultPlatformType). LinkedIn, Instagram, and TikTok currently use: prompt-level behavioral guidance + temporal peak shifts + product-layer approximation. This creates observable differences but is not true engine-level platform modeling.
+- **Future target**: Progressive engine-level support covering 5 sub-areas:
+- **Priority**: MEDIUM (as a whole track — individual sub-items below)
+- **Type**: Planned future workstream
+- **Timing**: CAN WAIT — post-frontend, pre-production scaling
+- **Status**: PLANNED
+
+### PLAT-04a: Platform action weighting
+- **Area**: Platform / Engine
+- **Description**: Different action tendencies/probabilities by platform at the runtime level. Instagram agents should have higher probability of LIKE_POST, lower probability of CREATE_COMMENT. LinkedIn agents should have higher probability of FOLLOW, lower probability of DISLIKE_POST. Currently all platforms use the same 21 ActionTypes with equal probability — the LLM decides what to do based on prompt guidance only.
+- **Implementation approach**: Per-platform action weight maps that modify which ActionTypes are offered to agents, or probabilistically filter agent actions post-LLM-decision.
+- **Dependencies**: PLAT-01/02/03 (done — prompt-level profiles exist)
+- **Priority**: MEDIUM
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
+### PLAT-04b: Platform-specific recsys / exposure logic
+- **Area**: Platform / Engine
+- **Description**: Different ranking/exposure behavior by platform. Instagram should favor visual/recent content. LinkedIn should favor professional network connections. TikTok should favor trending/viral content with fast decay. Currently all platforms use the same OASIS recsys (twitter/reddit/random/twhin-bert).
+- **Implementation approach**: Custom recsys functions per platform, or OASIS Platform fork with platform-specific recommendation scoring.
+- **Dependencies**: OASIS recsys customization
+- **Priority**: MEDIUM
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
+### PLAT-04c: Platform-specific engagement logic
+- **Area**: Platform / Engine
+- **Description**: Different spread patterns, content decay rates, discussion depth, and interaction styles by platform. TikTok content should spread faster and decay faster. LinkedIn threads should be deeper and more measured. Reddit discussions should have more nested depth. Instagram engagement should be broader but shallower.
+- **Dependencies**: PLAT-04a, PLAT-04b
 - **Priority**: LOW
-- **Type**: Architecture follow-up
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
+### PLAT-04d: Platform-specific content model
+- **Area**: Platform / Engine
+- **Description**: Different post/comment style expectations at the runtime level, not only prompt level. Instagram posts should have image descriptions. TikTok posts should be very short. LinkedIn posts should have professional formatting. This goes beyond LLM prompt guidance — it would validate/transform content at the platform layer.
+- **Dependencies**: PLAT-04a
+- **Priority**: LOW
+- **Timing**: CAN WAIT
+- **Status**: DEFERRED
+
+### PLAT-04e: Platform-specific network/exposure behavior
+- **Area**: Platform / Engine
+- **Description**: Different discovery patterns per platform. TikTok is discovery-heavy (algorithmic feed, strangers see your content). LinkedIn is graph-heavy (connection-based exposure). Reddit is community-centered (subreddit scope). Instagram is hybrid (explore + follower feed). X is mixed (algorithmic + follower + trending).
+- **Dependencies**: PLAT-04b
+- **Priority**: LOW
 - **Timing**: CAN WAIT
 - **Status**: DEFERRED
 

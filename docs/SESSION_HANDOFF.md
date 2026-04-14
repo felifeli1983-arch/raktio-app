@@ -240,9 +240,8 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 | Per-segment stance assignment uses global random, ignores per-segment bias | Requires segment-to-agent mapping logic | Audience system refinement |
 | Private audience service logic not enforced | Schema correct, service deferred | Feature step |
 | `stream_adapter.py` not wired (polling used) | Polling adequate for current scale | Production optimization |
-| No Agent Atlas API (`api/agents.py` stub) | Lower priority than runtime pipeline | Step 10+ |
-| No memory domain tables (5 tables) | Requires memory transformation service | Post-runtime step |
-| No knowledge/sources tables (4 tables) | Requires file processing pipeline | Later step |
+| No Agent Atlas API (`api/agents.py` stub) | Lower priority than runtime pipeline | POP-03 |
+| LinkedIn/Instagram/TikTok are prompt-level only, not engine-level | OASIS only supports Twitter/Reddit natively | PLAT-04 |
 | `runtime_failure_records` separate table not created | Failures visible via admin/runtime from simulation_runs | LOW |
 | Fire-and-forget background task dispatch | asyncio.create_task — no await, needs ARQ for production | RT-01 |
 | Memory topic extraction is hashtag-only (no NLP) | Posts without hashtags get no topic memory | MEM-02b |

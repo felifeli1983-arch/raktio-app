@@ -756,3 +756,17 @@ user, post, comment, like, dislike, follow, mute, report, rec, trace, comment_li
   3. Direct recsys injection: high-influence posts written to rec table (90%/60% probability)
 - **Full Distribution & Virality Layer**: PLANNED as future workstream (DIST-FULL in backlog). Covers timing sensitivity, algorithm behavior, noise context, seeding, archetypes, virality scoring.
 - **Important**: Raktio does NOT claim to predict virality. Spread patterns are scenario-based guidance.
+
+### Platform behavior layer (updated 2026-04-15, Step 10.5H)
+- **Engine-level platforms**: X (Twitter) and Reddit — natively supported by OASIS DefaultPlatformType
+- **Prompt-level platforms**: LinkedIn, Instagram, TikTok — run on Twitter OASIS backend with behavioral differentiation via:
+  - Platform-specific behavioral prompts (50-100 words per agent)
+  - Temporal peak hour shifts (TikTok -2h, LinkedIn -4h)
+  - Content style/tone/formality guidance
+- **Official future requirement (PLAT-04)**: LinkedIn, Instagram, TikTok must become progressively engine-level. Planned sub-tracks:
+  - PLAT-04a: Platform action weighting (different action probabilities)
+  - PLAT-04b: Platform-specific recsys/exposure logic
+  - PLAT-04c: Platform-specific engagement/spread/decay patterns
+  - PLAT-04d: Platform-specific content model (runtime validation)
+  - PLAT-04e: Platform-specific network/discovery behavior
+- **Timing**: CAN WAIT — post-frontend, pre-production scaling
