@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 10.5E1 — Direct Recsys Exposure Weighting**
+> Last completed step: **Deep Audit Fix Batch (post-10.5E1)**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -244,6 +244,7 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 | No memory domain tables (5 tables) | Requires memory transformation service | Post-runtime step |
 | No knowledge/sources tables (4 tables) | Requires file processing pipeline | Later step |
 | `runtime_failure_records` separate table not created | Failures visible via admin/runtime from simulation_runs | LOW |
+| Fire-and-forget background task dispatch | asyncio.create_task — no await, needs ARQ for production | RT-01 |
 | Memory topic extraction is hashtag-only (no NLP) | Posts without hashtags get no topic memory | MEM-02b |
 | Memory summary text is formulaic | No LLM synthesis — says "Participated in N simulation(s)" | MEM-02c |
 | Memory episode dedup not guarded on re-transformation | Double-run inserts duplicate episodes | MEM-02d |
