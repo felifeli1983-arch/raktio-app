@@ -20,6 +20,7 @@ from app.auth.permissions import (
     can_create_simulation,
     can_delete_simulation,
     can_edit_simulation,
+    can_launch_simulation,
 )
 from app.schemas.simulation import (
     SimulationCreate,
@@ -27,6 +28,7 @@ from app.schemas.simulation import (
     SimulationResponse,
     SimulationUpdate,
 )
+from app.runtime import launcher, supervisor
 from app.services import audience_service, brief_service, planner_service, simulation_service
 
 router = APIRouter()
@@ -150,6 +152,57 @@ async def plan_simulation(
         simulation_id=simulation_id,
         workspace_id=ctx.workspace_id,
     )
+
+
+@router.post("/{simulation_id}/launch")
+async def launch_simulation(
+    simulation_id: uuid.UUID,
+    ctx: WorkspaceContext = Depends(require_workspace_member),
+):
+    """Launch a simulation run (reserves credits, creates run, bootstraps)."""
+    if not can_launch_simulation(ctx.member_role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Viewers cannot launch simulations",
+        )
+
+    return await launcher.launch_simulation(
+        simulation_id=simulation_id,
+        workspace_id=ctx.workspace_id,
+    )
+
+
+@router.post("/{simulation_id}/pause")
+async def pause_simulation(
+    simulation_id: uuid.UUID,
+    ctx: WorkspaceContext = Depends(require_workspace_member),
+):
+    """Pause a running simulation."""
+    if not can_launch_simulation(ctx.member_role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    return await supervisor.pause_simulation(simulation_id, ctx.workspace_id)
+
+
+@router.post("/{simulation_id}/resume")
+async def resume_simulation(
+    simulation_id: uuid.UUID,
+    ctx: WorkspaceContext = Depends(require_workspace_member),
+):
+    """Resume a paused simulation."""
+    if not can_launch_simulation(ctx.member_role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    return await supervisor.resume_simulation(simulation_id, ctx.workspace_id)
+
+
+@router.post("/{simulation_id}/cancel")
+async def cancel_simulation(
+    simulation_id: uuid.UUID,
+    ctx: WorkspaceContext = Depends(require_workspace_member),
+):
+    """Cancel a running/paused simulation. Refunds reserved credits."""
+    if not can_launch_simulation(ctx.member_role):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
+    return await supervisor.cancel_simulation(simulation_id, ctx.workspace_id)
 
 
 @router.delete("/{simulation_id}", status_code=204)

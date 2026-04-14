@@ -189,12 +189,39 @@ class LLMAdapter:
         """
         Call DeepSeek API (OpenAI-compatible endpoint).
         Used exclusively for high-volume agent inference during OASIS runtime.
-        TODO: implement via openai-compatible client pointed at DeepSeek base URL.
         """
-        # from openai import AsyncOpenAI
-        # client = AsyncOpenAI(api_key=settings.deepseek_api_key, base_url=settings.deepseek_base_url)
-        # response = await client.chat.completions.create(...)
-        raise NotImplementedError("DeepSeek integration pending")
+        from openai import AsyncOpenAI
+
+        if not settings.deepseek_api_key:
+            raise RuntimeError("DEEPSEEK_API_KEY is not configured")
+
+        client = AsyncOpenAI(
+            api_key=settings.deepseek_api_key,
+            base_url=settings.deepseek_base_url,
+        )
+
+        # Build messages with system prompt prepended
+        api_messages = []
+        if system:
+            api_messages.append({"role": "system", "content": system})
+        api_messages.extend(messages)
+
+        response = await client.chat.completions.create(
+            model=model_id,
+            messages=api_messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+        choice = response.choices[0]
+        return LLMResponse(
+            content=choice.message.content or "",
+            model=response.model,
+            usage={
+                "input_tokens": response.usage.prompt_tokens if response.usage else 0,
+                "output_tokens": response.usage.completion_tokens if response.usage else 0,
+            },
+        )
 
 
 # Singleton instance used across all services

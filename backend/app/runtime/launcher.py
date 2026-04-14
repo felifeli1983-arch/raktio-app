@@ -1,2 +1,193 @@
-"""Raktio Runtime — launcher (placeholder)"""
-# TODO: implement launcher
+"""
+Raktio Runtime — Launcher
+
+Prepares and launches an OASIS simulation run.
+Creates a simulation_runs record and manages the bootstrap phase.
+
+The actual OASIS execution runs in a background task/worker.
+This module handles the pre-flight checks and initial setup.
+"""
+
+from __future__ import annotations
+
+import uuid
+from typing import Any
+
+from fastapi import HTTPException, status
+
+from app.db.supabase_client import get_supabase
+from app.repositories import agents as agent_repo
+from app.repositories import simulations as sim_repo
+from app.runtime.config_builder import build_run_config
+from app.services.simulation_service import estimate_credits
+
+
+async def launch_simulation(
+    simulation_id: uuid.UUID,
+    workspace_id: uuid.UUID,
+) -> dict[str, Any]:
+    """
+    Launch a simulation run.
+
+    Pre-flight checks:
+    1. Simulation must be in 'draft' with planner_status='ready'
+    2. agent_count_final must be > 0 (audience prepared)
+    3. Credit balance must be sufficient
+    4. Credit reservation is created
+
+    Then:
+    5. Create simulation_runs record (status='bootstrapping')
+    6. Build runtime config
+    7. Update simulation status to 'bootstrapping'
+
+    The actual OASIS execution would be dispatched to an ARQ worker.
+    For now, we prepare everything and mark as 'bootstrapping'.
+
+    Returns: run summary dict.
+    """
+    # 1. Validate simulation state
+    row = sim_repo.find_by_id(simulation_id, workspace_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Simulation not found")
+
+    if row.get("status") != "draft":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot launch simulation in '{row['status']}' status. Must be 'draft'.",
+        )
+
+    if row.get("planner_status") != "ready":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Planner not ready. Run /plan first.",
+        )
+
+    agent_count = row.get("agent_count_final", 0)
+    if agent_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No audience prepared. Run /prepare-audience first.",
+        )
+
+    # 2. Credit check + reservation
+    sb = get_supabase()
+    org_id = sim_repo.get_workspace_org_id(workspace_id)
+    if not org_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace has no organization")
+
+    credit_cost = estimate_credits(agent_count, row.get("duration_preset", "24h"))
+    available = sim_repo.get_available_credits(org_id)
+    if available is None or available < credit_cost:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Insufficient credits: {available or 0} available, {credit_cost} required",
+        )
+
+    # Reserve credits (deduct from available, add to reserved)
+    sb.table("credit_balances").update({
+        "available_credits": available - credit_cost,
+        "reserved_credits": credit_cost,
+    }).eq("organization_id", org_id).execute()
+
+    # Record credit reservation in ledger
+    sb.table("credit_ledger").insert({
+        "organization_id": org_id,
+        "workspace_id": str(workspace_id),
+        "event_type": "simulation_reservation",
+        "amount": -credit_cost,
+        "balance_after": available - credit_cost,
+        "linked_simulation_id": str(simulation_id),
+        "note": f"Credit reservation for simulation launch ({agent_count} agents)",
+    }).execute()
+
+    try:
+        # 3. Transition to cost_check → bootstrapping
+        sim_repo.update(simulation_id, workspace_id, {"status": "cost_check"})
+
+        # 4. Create simulation_runs record
+        run_id = uuid.uuid4()
+        sb.table("simulation_runs").insert({
+            "run_id": str(run_id),
+            "simulation_id": str(simulation_id),
+            "status": "bootstrapping",
+            "started_at": "now()",
+        }).execute()
+
+        # 5. Get participants and agent data for config
+        participants = agent_repo.get_simulation_participants(simulation_id)
+
+        agent_ids = [p["agent_id"] for p in participants]
+        agents = []
+        for aid in agent_ids[:50]:  # Limit initial batch for config
+            a = agent_repo.find_agent_by_id(uuid.UUID(aid))
+            if a:
+                agents.append(a)
+
+        # 6. Build runtime config
+        runtime_config = build_run_config(
+            simulation_id=simulation_id,
+            run_id=run_id,
+            simulation_row=row,
+            participants=participants[:50],  # Config uses subset
+            agents=agents,
+        )
+
+        # 7. Update simulation and run records
+        sim_repo.update(simulation_id, workspace_id, {
+            "status": "bootstrapping",
+            "credit_final": credit_cost,
+        })
+
+        # Update run with paths
+        sb.table("simulation_runs").update({
+            "runtime_path": runtime_config["run_workspace_path"],
+            "sqlite_path": runtime_config["sqlite_path"],
+            "runtime_metadata_json": {
+                "agent_count": runtime_config["agent_count"],
+                "platform_type": runtime_config["platform_type"],
+                "duration_steps": runtime_config["duration_steps"],
+            },
+        }).eq("run_id", str(run_id)).execute()
+
+        # Store final runtime config in simulation_configs
+        sb.table("simulation_configs").update({
+            "final_runtime_config_json": runtime_config,
+        }).eq("simulation_id", str(simulation_id)).execute()
+
+        return {
+            "run_id": str(run_id),
+            "status": "bootstrapping",
+            "agent_count": runtime_config["agent_count"],
+            "platform_type": runtime_config["platform_type"],
+            "duration_steps": runtime_config["duration_steps"],
+            "run_workspace_path": runtime_config["run_workspace_path"],
+            "credit_reserved": credit_cost,
+            "note": "OASIS execution will be dispatched to background worker. "
+                    "Monitor via GET /api/simulations/{id} or SSE stream.",
+        }
+
+    except Exception as exc:
+        # Refund credits on failure
+        sb.table("credit_balances").update({
+            "available_credits": available,
+            "reserved_credits": 0,
+        }).eq("organization_id", org_id).execute()
+
+        sb.table("credit_ledger").insert({
+            "organization_id": org_id,
+            "workspace_id": str(workspace_id),
+            "event_type": "refund",
+            "amount": credit_cost,
+            "balance_after": available,
+            "linked_simulation_id": str(simulation_id),
+            "note": f"Refund: launch failed — {exc}",
+        }).execute()
+
+        sim_repo.update(simulation_id, workspace_id, {"status": "draft"})
+
+        if isinstance(exc, HTTPException):
+            raise
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Launch failed: {exc}",
+        )
