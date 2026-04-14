@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 7 — Reports + Compare**
+> Last completed step: **Step 7 — Reports + Compare (+ audit fix batch applied)**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git (branch `main`)
 
 ---
@@ -96,6 +96,18 @@
   - `schemas/report.py`, `schemas/compare.py` — Pydantic models
   - Tests pass: all endpoints registered, report record created (sections fail gracefully without API key), compare fails at LLM (502), permissions enforced
   - **Git**: local `main` ahead by 4 commits; pushed to branch `feat/steps-4-7-full`. User needs to merge to main.
+- **Audit Fix Batch (Steps 3-7)** — applied and tested:
+  - Migration `005_report_sections_expand.sql` — expanded section_key CHECK, added `audience_id` to simulations
+  - SSE auth: `?token=` query param fallback for EventSource
+  - Launcher: all participants loaded (no truncation)
+  - Report/compare restricted to completed simulations
+  - All services refactored to use repositories (zero direct DB calls)
+  - 4 missing report sections added, audience_id linked, timestamps fixed
+  - **Steps 3-7 all PASS after fixes**
+
+### Structural Limitation (intentional)
+
+Reports and compare generate from brief/planner config, NOT from OASIS runtime evidence. True evidence-backed reporting requires completing the OASIS `env.step()` worker. This is documented in `confidence_limitations` section of every report.
 
 ### Not Started Yet
 - Step 8: Billing / credits
