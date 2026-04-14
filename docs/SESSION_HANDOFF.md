@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 4 — Audience Sourcing + Agent Population**
+> Last completed step: **Step 6 — Live Streaming (SSE)**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git (branch `main`)
 
 ---
@@ -68,8 +68,26 @@
   - Structural tests pass: prerequisite checks (422), permissions (403), error recovery, CRUD operations
   - **Note**: `DEEPSEEK_API_KEY` now configured in `.env`. `ANTHROPIC_API_KEY` still empty.
 
+- **Step 5: OASIS Runtime Bridge + Launch Lifecycle** — implemented and tested:
+  - `_call_deepseek()` in `llm_adapter.py` — OpenAI-compatible client, tested with real API key
+  - `runtime/config_builder.py` — translates product config → OASIS UserInfo format, creates run workspace
+  - `runtime/launcher.py` — pre-flight checks, credit reservation, simulation_runs creation, config persistence
+  - `runtime/supervisor.py` — pause, resume, cancel with credit refund via ledger
+  - `runtime/event_bridge.py` — reads OASIS SQLite, normalizes to SimulationEvent objects
+  - `runtime/state_reader.py` — combines product DB + runtime SQLite state for canvas
+  - 4 new endpoints: `POST /launch`, `/pause`, `/resume`, `/cancel`
+  - Credit lifecycle: reservation on launch, refund on cancel, ledger entries for both
+  - Integration test: launch → credits reserved → cancel → credits refunded → all assertions pass
+  - **Note**: Actual OASIS process execution (env.step() loop) deferred to ARQ worker implementation. Current launcher prepares everything and marks as `bootstrapping`.
+  - **Git**: committed locally on `main`, pushed to `feat/step-5-runtime-bridge` branch (main push blocked by sandbox)
+
+- **Step 6: Live Streaming (SSE)** — implemented and tested:
+  - `api/stream.py` — SSE endpoint `GET /api/stream/{simulation_id}`, auth + membership check, heartbeat, auto-end on completion
+  - `adapters/stream_adapter.py` — StreamManager with concurrent listeners, broadcast, queue-based distribution
+  - `frontend/lib/hooks/useSimulationStream.ts` — React EventSource hook with reconnection, event buffering (last 500), status tracking
+  - Tests pass: SSE content-type, run_state/simulation_ended events, 401 without auth, 403 for non-members
+
 ### Not Started Yet
-- Step 5: OASIS runtime bridge
 - Step 6: Live streaming (SSE)
 - Step 7: Reports + Compare
 - Step 8: Billing / credits
@@ -314,29 +332,26 @@ raktio-app/
 
 ## 5. Next Exact Implementation Step
 
-### Step 5: OASIS Runtime Bridge
+### Step 7: Reports + Compare
 
 Split into micro-steps:
 
-**Step 5A — DeepSeek adapter**
-1. Implement `_call_deepseek()` in `llm_adapter.py` using OpenAI-compatible client
-2. Test with real `DEEPSEEK_API_KEY` (now configured)
+**Step 7A — Reports tables migration**
+1. Create `004_reports_and_compare.sql` — tables: reports, report_sections, compare_groups, compare_runs
+2. Apply migration to live Supabase
 
-**Step 5B — Runtime config builder**
-1. Implement `runtime/config_builder.py` — translates product-level simulation config into OASIS-executable config
-2. Creates run workspace directory, SQLite init
+**Step 7B — Report generation service**
+1. Implement `report_service.py` — calls Claude Sonnet (REPORT route) to generate report sections
+2. Progressive section generation (executive summary, key findings, belief shifts, etc.)
+3. Store in reports + report_sections tables
 
-**Step 5C — Runtime launcher + supervisor**
-1. Implement `runtime/launcher.py` — prepares and launches OASIS process
-2. Implement `runtime/supervisor.py` — monitors lifecycle, handles pause/stop
-3. Add `POST /api/simulations/{id}/launch` endpoint
-4. Status transitions: `draft` → `cost_check` → `bootstrapping` → `running`
+**Step 7C — Report API endpoints**
+1. Implement `api/reports.py` — GET list, GET single, POST generate
+2. Implement `schemas/report.py` — Pydantic models
 
-**Step 5D — Event bridge**
-1. Implement `runtime/event_bridge.py` — normalizes OASIS trace/SQLite events
-2. Implement `runtime/state_reader.py` — reads runtime state for canvas
-
-**Note**: OASIS integration depends on `oasis-main/` being present. If not available, implement the bridge interface with mock/stub runtime.
+**Step 7D — Compare service + API**
+1. Implement `compare_service.py` — structured comparison between two simulations
+2. Implement `api/compare.py` — GET, POST endpoints
 
 ---
 
