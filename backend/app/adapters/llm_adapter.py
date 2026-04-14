@@ -44,6 +44,25 @@ class LLMResponse:
         self.usage = usage
 
 
+# ── Cost estimation constants (per 1M tokens, USD) ────────────────────
+# These are approximate list prices for cost tracking, not for billing.
+_COST_PER_1M_INPUT: dict[str, float] = {
+    "claude-sonnet-4-6": 3.0,
+    "deepseek-chat": 0.14,
+}
+_COST_PER_1M_OUTPUT: dict[str, float] = {
+    "claude-sonnet-4-6": 15.0,
+    "deepseek-chat": 0.28,
+}
+
+
+def _estimate_cost_usd(model: str, input_tokens: int, output_tokens: int) -> float:
+    """Estimate USD cost from token counts. For analytics only."""
+    input_cost = input_tokens * _COST_PER_1M_INPUT.get(model, 1.0) / 1_000_000
+    output_cost = output_tokens * _COST_PER_1M_OUTPUT.get(model, 5.0) / 1_000_000
+    return round(input_cost + output_cost, 6)
+
+
 class LLMAdapter:
     """
     Provider-agnostic LLM adapter.
@@ -75,23 +94,30 @@ class LLMAdapter:
         max_tokens: int = 4096,
         temperature: float = 0.7,
         stream: bool = False,
+        log_context: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
         """
         Send a completion request to the appropriate provider.
 
         Args:
-            route:      ModelRoute.PLANNING | RUNTIME | REPORT
-            messages:   List of {role, content} dicts
-            system:     System prompt (ignored if provider doesn't support it as separate field)
-            max_tokens: Maximum output tokens
+            route:       ModelRoute.PLANNING | RUNTIME | REPORT
+            messages:    List of {role, content} dicts
+            system:      System prompt
+            max_tokens:  Maximum output tokens
             temperature: Sampling temperature
-            stream:     Whether to stream (returns AsyncIterator if True)
+            stream:      Whether to stream
+            log_context: Optional dict with context IDs for usage logging:
+                         simulation_id, run_id, report_id, compare_id,
+                         agent_id, organization_id, workspace_id, user_id,
+                         service_module, call_purpose
         """
+        import time
         model_id = self._get_model_id(route)
+        t0 = time.time()
 
         if self._is_anthropic_route(route):
-            return await self._call_anthropic(
+            response = await self._call_anthropic(
                 model_id=model_id,
                 system=system,
                 messages=messages,
@@ -99,8 +125,9 @@ class LLMAdapter:
                 temperature=temperature,
                 **kwargs,
             )
+            provider = "anthropic"
         else:
-            return await self._call_deepseek(
+            response = await self._call_deepseek(
                 model_id=model_id,
                 system=system,
                 messages=messages,
@@ -108,6 +135,63 @@ class LLMAdapter:
                 temperature=temperature,
                 **kwargs,
             )
+            provider = "deepseek"
+
+        duration_ms = round((time.time() - t0) * 1000)
+
+        # Log usage (fire-and-forget, don't block the response)
+        self._log_usage(
+            provider=provider,
+            model=response.model,
+            route=route.value,
+            input_tokens=response.usage.get("input_tokens", 0),
+            output_tokens=response.usage.get("output_tokens", 0),
+            duration_ms=duration_ms,
+            log_context=log_context or {},
+        )
+
+        return response
+
+    def _log_usage(
+        self,
+        provider: str,
+        model: str,
+        route: str,
+        input_tokens: int,
+        output_tokens: int,
+        duration_ms: int,
+        log_context: dict[str, Any],
+    ) -> None:
+        """Log LLM usage to the database. Best-effort, never raises."""
+        try:
+            from app.repositories import llm_usage as usage_repo
+
+            row = {
+                "provider": provider,
+                "model": model,
+                "route": route,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "estimated_cost_usd": _estimate_cost_usd(model, input_tokens, output_tokens),
+                "duration_ms": duration_ms,
+                # Context IDs (all optional)
+                "simulation_id": log_context.get("simulation_id"),
+                "run_id": log_context.get("run_id"),
+                "report_id": log_context.get("report_id"),
+                "compare_id": log_context.get("compare_id"),
+                "agent_id": log_context.get("agent_id"),
+                "organization_id": log_context.get("organization_id"),
+                "workspace_id": log_context.get("workspace_id"),
+                "user_id": log_context.get("user_id"),
+                "service_module": log_context.get("service_module"),
+                "call_purpose": log_context.get("call_purpose"),
+            }
+            # Remove None values (Supabase doesn't like explicit nulls for FK columns)
+            row = {k: v for k, v in row.items() if v is not None}
+
+            usage_repo.insert_usage(row)
+        except Exception:
+            pass  # Best-effort logging — never block the LLM call path
 
     async def stream_complete(
         self,
