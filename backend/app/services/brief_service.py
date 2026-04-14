@@ -102,13 +102,46 @@ async def understand_brief(
     sim_repo.update(simulation_id, workspace_id, {"status": "understanding"})
 
     try:
-        # 3. Call Claude Sonnet
+        # 3. Build brief content with source context if available
+        brief_content = f"Analyze this simulation brief:\n\n{row['brief_text']}"
+
+        # Inject source context from linked documents
+        from app.services.knowledge_service import get_source_context_for_simulation
+        source_context = get_source_context_for_simulation(str(simulation_id))
+        if source_context:
+            brief_content += "\n\n## Uploaded Source Documents\n"
+            brief_content += f"Number of sources: {source_context['source_count']}\n\n"
+
+            for summary in source_context.get("summaries", [])[:3]:
+                brief_content += f"### Source Summary\n{summary}\n\n"
+
+            entities = source_context.get("entities", [])
+            if entities:
+                brief_content += "### Key Entities from Sources\n"
+                for e in entities[:10]:
+                    if isinstance(e, dict):
+                        brief_content += f"- **{e.get('name', '?')}** ({e.get('type', '?')}): {e.get('relevance', '')}\n"
+                brief_content += "\n"
+
+            topics = source_context.get("topics", [])
+            if topics:
+                brief_content += f"### Topics from Sources: {', '.join(topics[:15])}\n\n"
+
+            claims = source_context.get("key_claims", [])
+            if claims:
+                brief_content += "### Key Claims from Sources\n"
+                for c in claims[:5]:
+                    if isinstance(c, dict):
+                        brief_content += f"- {c.get('claim', '')}\n"
+                brief_content += "\n"
+
+        # 4. Call Claude Sonnet
         response: LLMResponse = await llm_adapter.complete(
             route=ModelRoute.PLANNING,
             messages=[
                 {
                     "role": "user",
-                    "content": f"Analyze this simulation brief:\n\n{row['brief_text']}",
+                    "content": brief_content,
                 }
             ],
             system=BRIEF_UNDERSTANDING_SYSTEM,
