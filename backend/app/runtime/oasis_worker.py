@@ -247,6 +247,11 @@ async def run_oasis_simulation(
 
             await env.step(step_actions)
 
+            # Influence exposure boost: inject high-influence agents' posts
+            # into the rec table so more agents see them next step.
+            # This directly increases exposure/reach for influential content.
+            _boost_influence_exposure(sqlite_path, agent_configs)
+
             execution_summary["steps_completed"] = step_num
 
             simulated_time = f"{step_num}h"
@@ -319,6 +324,94 @@ async def run_oasis_simulation(
     logger.info(f"Run finished: {final_status}, {execution_summary['steps_completed']}/{duration_steps} steps")
     return execution_summary
 
+
+
+# ── Influence exposure boost ───────────────────────────────────────────
+
+def _boost_influence_exposure(sqlite_path: str, agent_configs: list) -> None:
+    """
+    Directly inject high-influence agents' posts into the OASIS rec table.
+
+    This ensures that high-influence agents' content appears in more agents'
+    recommendation feeds, simulating the platform-level reach advantage
+    that influential accounts have.
+
+    Mechanism:
+      - For each high-influence agent (influence_weight >= 2.0), find their posts
+      - For each other agent who doesn't already have those posts in rec, add them
+      - Probability of injection scales with influence_weight:
+        weight >= 3.0: 90% chance per agent
+        weight >= 2.0: 60% chance per agent
+      - This is probabilistic, not deterministic
+
+    This is a direct SQLite write — no OASIS API dependency.
+    """
+    import random
+    import sqlite3
+
+    if not sqlite_path or not os.path.exists(sqlite_path):
+        return
+
+    # Find high-influence agent indices
+    high_influence = {}
+    for cfg in agent_configs:
+        weight = cfg.get("profile", {}).get("influence_weight", 1.0)
+        if weight >= 2.0:
+            high_influence[cfg["agent_index"]] = weight
+
+    if not high_influence:
+        return
+
+    try:
+        conn = sqlite3.connect(sqlite_path)
+        cur = conn.cursor()
+
+        # Get all user_ids
+        cur.execute("SELECT user_id, agent_id FROM user")
+        users = {row[1]: row[0] for row in cur.fetchall()}  # agent_id → user_id
+        all_user_ids = list(users.values())
+
+        for agent_idx, weight in high_influence.items():
+            oasis_uid = users.get(agent_idx)
+            if oasis_uid is None:
+                continue
+
+            # Find this agent's posts
+            cur.execute("SELECT post_id FROM post WHERE user_id = ?", (oasis_uid,))
+            post_ids = [row[0] for row in cur.fetchall()]
+            if not post_ids:
+                continue
+
+            # Injection probability
+            prob = 0.9 if weight >= 3.0 else 0.6
+
+            # For each other user, probabilistically add recs
+            for uid in all_user_ids:
+                if uid == oasis_uid:
+                    continue
+                if random.random() > prob:
+                    continue
+
+                for pid in post_ids:
+                    # Check if rec already exists (avoid duplicate PK violation)
+                    cur.execute(
+                        "SELECT 1 FROM rec WHERE user_id = ? AND post_id = ?",
+                        (uid, pid)
+                    )
+                    if not cur.fetchone():
+                        try:
+                            cur.execute(
+                                "INSERT INTO rec (user_id, post_id) VALUES (?, ?)",
+                                (uid, pid)
+                            )
+                        except sqlite3.IntegrityError:
+                            pass  # Concurrent insert — safe to ignore
+
+        conn.commit()
+        conn.close()
+
+    except Exception as exc:
+        logger.debug(f"Influence exposure boost skipped: {exc}")
 
 
 # ── Status update helpers ──────────────────────────────────────────────
