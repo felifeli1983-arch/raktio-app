@@ -66,15 +66,10 @@
 
 ## Distribution & Virality
 
-### DIST-01: Publisher authority / reputation scoring
+### DIST-01: Publisher authority / reputation scoring ✅ DONE
 - **Area**: Distribution
-- **Description**: All agents currently have equal reach mechanics. In reality, high-follower agents should have posts seen by more people. `influence_weight` and `follower_band` exist in agent profiles but don't affect OASIS recsys exposure. Need to weight recommendation/exposure by agent authority.
-- **Why it matters**: Without authority gradient, a nano-follower has the same reach as a macro-influencer. This undermines platform realism and "who drives the narrative" analysis.
-- **Priority**: HIGH
-- **Type**: Missing feature
-- **Dependencies**: None (agent fields exist)
-- **Timing**: DO NOW (Step 10.5E — next)
-- **Status**: DEFERRED
+- **Description**: High-influence agents (influence_weight ≥2.0) get ×1.2 activation boost in temporal selection + "high influence" label in OASIS description. Low-influence agents (≤0.5) get ×0.8 reduction + "low influence" label. Combined with activity level and daypart. Probabilistic, not deterministic.
+- **Status**: DONE (Step 10.5E)
 
 ### DIST-02: Platform algorithm behavior modeling
 - **Area**: Distribution
