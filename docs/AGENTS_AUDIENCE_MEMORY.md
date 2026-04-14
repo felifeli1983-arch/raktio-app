@@ -753,9 +753,14 @@ The backend population/memory system must support:
   - Updates topic exposure from hashtag extraction (LLM extraction deferred: MEM-02b)
   - Updates rolling summaries with sim count, activity, stance
   - Tracked via `memory_update_jobs`
+- **Memory-informed agent context implemented** (Step 10.5C):
+  - `config_builder._get_memory_context()` reads summary + topic exposures
+  - Returning agents get: "Past experience: ...", "Recent tendency: ...", "Known topics: ..."
+  - First-time agents: no memory context (clean slate)
+  - Token-safe: max ~315 chars of memory in description
+  - Verified: Marco searched "Italian cuisine food sustainability" — memory-influenced behavior
 - **NOT YET IMPLEMENTED**:
-  - Memory-informed agent prompts (Step 10.5C) — feed memory into OASIS UserInfo
-  - runtime_stance still set once at assembly, never updated
+  - runtime_stance updates across runs (stance is set at assembly, not evolved)
   - LLM-based topic extraction (MEM-02b) — currently hashtag-only
 
 ### Private audiences
