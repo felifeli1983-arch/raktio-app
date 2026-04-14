@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from app.config import settings
+from app.repositories import billing as billing_repo
 from app.repositories import simulations as sim_repo
 
 logger = logging.getLogger("raktio.oasis_worker")
@@ -258,14 +259,32 @@ async def run_oasis_simulation(
     except Exception as exc:
         logger.warning(f"Error closing environment: {exc}")
 
-    # ── 10. Determine final status ──
+    # ── 10. Determine final status + settle credits ──
     if execution_summary["errors"]:
         final_status = "failed"
         failure_reason = "; ".join(execution_summary["errors"])
         _finalize_run(simulation_id, workspace_id, run_id, "failed", failure_reason)
+        # Failed runs get full refund (handled by supervisor.cancel or here)
+        _settle_credits(
+            simulation_id, workspace_id,
+            steps_completed=execution_summary["steps_completed"],
+            steps_total=duration_steps,
+            agent_count=len(agent_configs),
+            duration_preset=runtime_config.get("duration_preset", "24h"),
+            failed=True,
+        )
     else:
         _finalize_run(simulation_id, workspace_id, run_id, "completed", None)
         final_status = "completed"
+        # Successful runs settle based on actual execution
+        _settle_credits(
+            simulation_id, workspace_id,
+            steps_completed=execution_summary["steps_completed"],
+            steps_total=duration_steps,
+            agent_count=len(agent_configs),
+            duration_preset=runtime_config.get("duration_preset", "24h"),
+            failed=False,
+        )
 
     execution_summary["final_status"] = final_status
     execution_summary["sqlite_path"] = sqlite_path
@@ -339,4 +358,118 @@ def _finalize_run(
         uuid_mod.UUID(simulation_id),
         uuid_mod.UUID(workspace_id),
         {"status": sim_status},
+    )
+
+
+def _settle_credits(
+    simulation_id: str,
+    workspace_id: str,
+    steps_completed: int,
+    steps_total: int,
+    agent_count: int,
+    duration_preset: str,
+    failed: bool,
+) -> None:
+    """
+    Settle credits after OASIS execution completes.
+
+    Credit settlement logic:
+      - On success (all steps completed): actual_cost = reserved_cost (no change)
+      - On partial success (some steps completed): actual_cost = reserved × (steps/total)
+      - On failure (0 steps): full refund
+      - Partial refund = reserved - actual_cost
+
+    Creates:
+      - simulation_finalization ledger entry with actual cost
+      - refund ledger entry if partial refund applies
+
+    Updates:
+      - credit_balances: reserved→0, available adjusted for refund
+      - simulations.credit_final: set to actual cost
+    """
+    import uuid as uuid_mod
+    from app.services.simulation_service import estimate_credits
+
+    org_id = sim_repo.get_workspace_org_id(uuid_mod.UUID(workspace_id))
+    if not org_id:
+        logger.warning(f"Cannot settle credits: no org for workspace {workspace_id}")
+        return
+
+    # Get the simulation to read credit_final (which is the reserved amount)
+    sim = sim_repo.find_by_id(uuid_mod.UUID(simulation_id), uuid_mod.UUID(workspace_id))
+    if not sim:
+        logger.warning(f"Cannot settle credits: simulation {simulation_id} not found")
+        return
+
+    reserved = sim.get("credit_final", 0)
+    if reserved == 0:
+        return  # Nothing to settle
+
+    # Calculate actual cost based on execution
+    if failed and steps_completed == 0:
+        actual_cost = 0
+    elif steps_completed >= steps_total:
+        actual_cost = reserved  # Full execution = full cost
+    else:
+        # Proportional cost for partial execution
+        completion_ratio = steps_completed / steps_total if steps_total > 0 else 0
+        actual_cost = max(1, round(reserved * completion_ratio))
+
+    refund_amount = reserved - actual_cost
+
+    # Get current balance
+    balance = billing_repo.get_balance(org_id)
+    if not balance:
+        logger.warning(f"Cannot settle credits: no balance for org {org_id}")
+        return
+
+    current_available = balance["available_credits"]
+    current_reserved = balance["reserved_credits"]
+
+    # Settle: remove from reserved, refund difference to available
+    new_reserved = max(0, current_reserved - reserved)
+    new_available = current_available + refund_amount
+
+    billing_repo.refund_credits(org_id, new_available, new_reserved)
+
+    # Finalization ledger entry (the actual cost consumed)
+    if actual_cost > 0:
+        billing_repo.insert_ledger_entry({
+            "organization_id": org_id,
+            "workspace_id": workspace_id,
+            "event_type": "simulation_finalization",
+            "amount": -actual_cost,
+            "balance_after": new_available,
+            "linked_simulation_id": simulation_id,
+            "note": (
+                f"Credit finalization: {actual_cost} credits consumed "
+                f"({steps_completed}/{steps_total} steps, {agent_count} agents)"
+            ),
+        })
+
+    # Refund ledger entry if partial
+    if refund_amount > 0:
+        billing_repo.insert_ledger_entry({
+            "organization_id": org_id,
+            "workspace_id": workspace_id,
+            "event_type": "refund",
+            "amount": refund_amount,
+            "balance_after": new_available,
+            "linked_simulation_id": simulation_id,
+            "note": (
+                f"Partial refund: {refund_amount} credits returned "
+                f"(ran {steps_completed}/{steps_total} steps)"
+            ),
+        })
+
+    # Update simulation with actual cost
+    sim_repo.update(
+        uuid_mod.UUID(simulation_id),
+        uuid_mod.UUID(workspace_id),
+        {"credit_final": actual_cost},
+    )
+
+    logger.info(
+        f"Credits settled: reserved={reserved}, actual={actual_cost}, "
+        f"refund={refund_amount}, steps={steps_completed}/{steps_total}"
     )
