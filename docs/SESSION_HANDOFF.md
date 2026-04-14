@@ -377,12 +377,17 @@ This prerequisite block must complete before Step 8 begins.
 - **event_bridge.py mismatches**: `like` is SQL reserved word (needs quoting), comments not read, trace not read, user table not used for ID mapping, rec table not used for exposure
 - Fixes required before 7.5B: rewrite event_bridge.py against real schema (will be done in 7.5C)
 
-**Step 7.5B — OASIS runtime worker**
-1. Implement runtime/oasis_worker.py — actual env.step() loop
-2. Create SocialAgent instances from runtime_config agent_configs
-3. Build AgentGraph, call oasis.make(), env.reset(), env.step() loop, env.close()
-4. Update simulation_runs.simulated_time_completed during execution
-5. Update simulation status: running → completing → completed (or failed)
+**Step 7.5B — OASIS runtime worker** ✅ COMPLETED
+- `runtime/oasis_worker.py` implemented: full `env.step()` loop
+- Model: `ModelFactory.create(OPENAI_COMPATIBLE_MODEL, "deepseek-chat", api_key, url)`
+- Agents: `SocialAgent(agent_id, UserInfo(...), agent_graph, model, available_actions)`
+- Execution: `oasis.make()` → `env.reset()` → `env.step({agent: LLMAction()})` × N → `env.close()`
+- Status transitions: `bootstrapping → running → completing → completed` (or `failed`)
+- Progress: `simulated_time_completed` updated each step, `runtime_metadata_json` with step/total/pct
+- E2E test: 3 agents, 6 steps, DeepSeek → **6 posts, 7 comments, 2 likes, 33 trace entries**
+- Agents produced culturally coherent Italian food discourse
+- Launcher dispatches worker inline (`run_oasis=True`); production should use ARQ
+- **OASIS simulations now actually run. This is the most significant milestone in the project.**
 
 **Step 7.5C — Verified event bridge**
 1. Update event_bridge.py with real OASIS SQLite table names/columns
