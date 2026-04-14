@@ -57,20 +57,12 @@ async def get_usage_history(
     if not org_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace has no organization")
 
-    sb = get_supabase()
-    result = (
-        sb.table("credit_ledger")
-        .select("*")
-        .eq("organization_id", org_id)
-        .order("created_at", desc=True)
-        .limit(limit)
-        .execute()
-    )
+    entries = billing_repo.get_ledger_entries(org_id, limit)
 
     return {
         "organization_id": org_id,
-        "entries": result.data or [],
-        "total": len(result.data or []),
+        "entries": entries,
+        "total": len(entries),
     }
 
 

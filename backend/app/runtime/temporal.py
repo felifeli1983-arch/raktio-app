@@ -25,6 +25,14 @@ from __future__ import annotations
 import random
 from typing import Any
 
+from app.runtime.constants import (
+    ACTIVITY_HIGH_LABEL, ACTIVITY_HIGH_MODIFIER,
+    ACTIVITY_LOW_LABEL, ACTIVITY_LOW_MODIFIER,
+    FOLLOWER_MACRO_LABEL, FOLLOWER_NANO_LABEL,
+    INFLUENCE_HIGH_LABEL, INFLUENCE_HIGH_MODIFIER,
+    INFLUENCE_LOW_LABEL, INFLUENCE_LOW_MODIFIER,
+)
+
 
 # ── Daypart definitions ────────────────────────────────────────────────
 
@@ -132,16 +140,16 @@ def select_active_agents(
             desc = (agent.user_info.description or "").lower()
 
         # Activity level modifier
-        if "high activity" in desc:
-            agent_multiplier *= 1.3
-        elif "low activity" in desc:
-            agent_multiplier *= 0.6
+        if ACTIVITY_HIGH_LABEL in desc:
+            agent_multiplier *= ACTIVITY_HIGH_MODIFIER
+        elif ACTIVITY_LOW_LABEL in desc:
+            agent_multiplier *= ACTIVITY_LOW_MODIFIER
 
         # Influence weight modifier
-        if "high influence" in desc or "macro" in desc:
-            agent_multiplier *= 1.2
-        elif "low influence" in desc or "nano" in desc:
-            agent_multiplier *= 0.8
+        if INFLUENCE_HIGH_LABEL in desc or FOLLOWER_MACRO_LABEL in desc:
+            agent_multiplier *= INFLUENCE_HIGH_MODIFIER
+        elif INFLUENCE_LOW_LABEL in desc or FOLLOWER_NANO_LABEL in desc:
+            agent_multiplier *= INFLUENCE_LOW_MODIFIER
 
         agent_multiplier = min(1.0, agent_multiplier)
 

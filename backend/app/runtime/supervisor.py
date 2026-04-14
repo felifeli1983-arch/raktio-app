@@ -94,24 +94,27 @@ async def cancel_simulation(
     for s in ("running", "paused", "bootstrapping"):
         sim_repo.update_run_by_simulation(str(simulation_id), s, cancel_data)
 
-    # Refund reserved credits
-    credit_final = row.get("credit_final", 0)
-    if credit_final > 0:
-        org_id = sim_repo.get_workspace_org_id(workspace_id)
-        if org_id:
+    # Refund credits: look up the original reservation amount from the ledger
+    # (not from credit_final, which oasis_worker may have overwritten with actual cost)
+    org_id = sim_repo.get_workspace_org_id(workspace_id)
+    refund_amount = 0
+    if org_id:
+        reserved_amount = billing_repo.get_reservation_amount(org_id, str(simulation_id))
+        if reserved_amount > 0:
             balance = billing_repo.get_balance(org_id)
             if balance:
-                new_available = balance["available_credits"] + credit_final
-                new_reserved = max(0, balance["reserved_credits"] - credit_final)
+                new_available = balance["available_credits"] + reserved_amount
+                new_reserved = max(0, balance["reserved_credits"] - reserved_amount)
                 billing_repo.refund_credits(org_id, new_available, new_reserved)
                 billing_repo.insert_ledger_entry({
                     "organization_id": org_id,
                     "workspace_id": str(workspace_id),
                     "event_type": "refund",
-                    "amount": credit_final,
+                    "amount": reserved_amount,
                     "balance_after": new_available,
                     "linked_simulation_id": str(simulation_id),
                     "note": "Refund: simulation canceled by user",
                 })
+                refund_amount = reserved_amount
 
-    return {"status": "canceled", "simulation_id": str(simulation_id), "credits_refunded": credit_final}
+    return {"status": "canceled", "simulation_id": str(simulation_id), "credits_refunded": refund_amount}

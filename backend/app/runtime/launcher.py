@@ -162,6 +162,7 @@ async def launch_simulation(
         #    In production, this should be an ARQ job dispatch instead.
         if run_oasis:
             import asyncio
+            import logging
             from app.runtime.oasis_worker import run_oasis_simulation
 
             async def _run_in_background():
@@ -178,7 +179,18 @@ async def launch_simulation(
                         f"Background OASIS run failed: {exc}"
                     )
 
-            asyncio.create_task(_run_in_background())
+            task = asyncio.create_task(_run_in_background())
+
+            # Track task errors — fire-and-forget but not silent
+            def _on_task_done(t):
+                if t.cancelled():
+                    logging.getLogger("raktio.launcher").warning("OASIS task was cancelled")
+                elif t.exception():
+                    logging.getLogger("raktio.launcher").error(
+                        f"OASIS background task exception: {t.exception()}"
+                    )
+
+            task.add_done_callback(_on_task_done)
 
         return {
             "run_id": str(run_id),
@@ -192,6 +204,8 @@ async def launch_simulation(
                     "Connect to GET /api/stream/{id} for live events.",
         }
 
+    except (SystemExit, KeyboardInterrupt):
+        raise  # Never swallow system-level signals
     except Exception as exc:
         # Refund credits on failure
         billing_repo.refund_credits(org_id, available, 0)

@@ -56,3 +56,43 @@ def insert_ledger_entry(row: dict[str, Any]) -> dict[str, Any]:
     sb = get_supabase()
     result = sb.table("credit_ledger").insert(row).execute()
     return result.data[0] if result.data else {}
+
+
+def get_reservation_amount(organization_id: str, simulation_id: str) -> int:
+    """
+    Get the original credit reservation amount for a simulation.
+    Reads from the ledger (immutable source of truth) rather than
+    from simulations.credit_final (which gets overwritten by settlement).
+    """
+    sb = get_supabase()
+    result = (
+        sb.table("credit_ledger")
+        .select("amount")
+        .eq("organization_id", organization_id)
+        .eq("linked_simulation_id", simulation_id)
+        .eq("event_type", "simulation_reservation")
+        .order("created_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if result.data:
+        # Reservation amount is negative in the ledger
+        return abs(result.data[0].get("amount", 0))
+    return 0
+
+
+def get_ledger_entries(
+    organization_id: str,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """Get recent credit ledger entries for an org."""
+    sb = get_supabase()
+    result = (
+        sb.table("credit_ledger")
+        .select("*")
+        .eq("organization_id", organization_id)
+        .order("created_at", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    return result.data or []

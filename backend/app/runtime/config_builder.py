@@ -16,7 +16,6 @@ OASIS patterns used (from exploration):
 from __future__ import annotations
 
 import json
-import os
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -24,6 +23,10 @@ from typing import Any
 
 from app.config import settings
 from app.repositories import memory as mem_repo
+from app.runtime.constants import (
+    INFLUENCE_HIGH_LABEL, INFLUENCE_LOW_LABEL, INFLUENCE_MODERATE_LABEL,
+    INFLUENCE_HIGH_THRESHOLD, INFLUENCE_LOW_THRESHOLD,
+)
 
 
 def build_run_config(
@@ -178,12 +181,12 @@ def _build_agent_description(agent: dict, participant: dict) -> str:
     influence = agent.get("influence_weight", 1.0)
 
     # Classify influence level for description
-    if influence >= 2.0:
-        influence_label = "high influence"
-    elif influence <= 0.5:
-        influence_label = "low influence"
+    if influence >= INFLUENCE_HIGH_THRESHOLD:
+        influence_label = INFLUENCE_HIGH_LABEL
+    elif influence <= INFLUENCE_LOW_THRESHOLD:
+        influence_label = INFLUENCE_LOW_LABEL
     else:
-        influence_label = "moderate influence"
+        influence_label = INFLUENCE_MODERATE_LABEL
 
     parts.append(f"{stance} stance, {activity} activity, {influence_label}")
 

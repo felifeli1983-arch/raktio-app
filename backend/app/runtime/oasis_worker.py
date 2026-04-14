@@ -259,8 +259,10 @@ async def run_oasis_simulation(
 
             logger.info(f"Step {step_num}/{duration_steps} completed")
 
+    except (SystemExit, KeyboardInterrupt, asyncio.CancelledError):
+        raise  # Never swallow system-level signals
     except Exception as exc:
-        error_msg = f"OASIS step failed at step {execution_summary['steps_completed']}: {exc}"
+        error_msg = f"OASIS step failed at step {execution_summary['steps_completed']}: {type(exc).__name__}: {exc}"
         logger.error(error_msg)
         execution_summary["errors"].append(error_msg)
 
@@ -509,7 +511,6 @@ def _settle_credits(
       - simulations.credit_final: set to actual cost
     """
     import uuid as uuid_mod
-    from app.services.simulation_service import estimate_credits
 
     org_id = sim_repo.get_workspace_org_id(uuid_mod.UUID(workspace_id))
     if not org_id:
