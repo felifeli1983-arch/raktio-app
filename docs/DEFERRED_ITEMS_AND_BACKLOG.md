@@ -273,10 +273,10 @@
 - **Description**: Full formula implemented: `agents × duration × platform × geography`. Platform: +20% per extra platform. Geography: +5% per extra country. Add-on pricing remains deferred.
 - **Status**: DONE (Step 8)
 
-### BIL-03: Billing service + API
+### BIL-03: Billing service + API ✅ DONE
 - **Area**: Billing
-- **Description**: `services/billing_service.py` and `api/billing.py` are stubs. No plan management, pack purchases, usage history, or upgrade prompts.
-- **Status**: DONE (Step 8) — balance, usage, estimate, plans endpoints implemented. Subscriptions and pack purchases remain deferred (BIL-04, BIL-05).
+- **Description**: billing_service.py + api/billing.py implemented: balance, usage, estimate, plans endpoints. Subscriptions and pack purchases remain deferred (BIL-04, BIL-05).
+- **Status**: DONE (Step 8)
 
 ### BIL-04: Subscriptions table
 - **Area**: Billing
@@ -529,6 +529,28 @@
 - **Recommended step**: Replay/analytics step
 - **Status**: DEFERRED
 
+### INF-04: Superseded stubs cleanup
+- **Area**: Infrastructure
+- **Description**: Two stub files are superseded by actual implementations and should be removed or documented: `services/runtime_bridge_service.py` (superseded by `runtime/oasis_worker.py` + `runtime/event_bridge.py`) and `adapters/oasis_adapter.py` (superseded by `runtime/oasis_worker.py`). They contain only TODO comments and are never imported.
+- **Why deferred**: No functional impact — they're dead files.
+- **Dependencies**: None
+- **Priority**: LOW
+- **Type**: Cleanup
+- **Related files**: `services/runtime_bridge_service.py`, `adapters/oasis_adapter.py`
+- **Recommended step**: Next cleanup pass
+- **Status**: DEFERRED
+
+### INF-05: LLM streaming (stream_complete)
+- **Area**: Infrastructure
+- **Description**: `llm_adapter.stream_complete()` raises `NotImplementedError`. Would be needed for progressive report section streaming to the frontend (showing text as it generates).
+- **Why deferred**: Reports generate synchronously per section. Streaming is a UX enhancement for the frontend.
+- **Dependencies**: Frontend report rendering
+- **Priority**: LOW
+- **Type**: Enhancement
+- **Related files**: `adapters/llm_adapter.py`
+- **Recommended step**: Frontend implementation step
+- **Status**: DEFERRED
+
 ### DM-02: Simulation bookmarks
 - **Area**: Data Model
 - **Description**: `simulation_bookmarks` table from DATA_MODEL_AND_STORAGE.md section 10 not created. User annotations/bookmarks on events.
@@ -543,32 +565,32 @@
 
 ## Priority Summary
 
-### HIGH priority items
-1. ~~**BIL-01**: Credit settlement~~ ✅ DONE
-2. **BIL-03**: Billing service + API (Step 8 — now READY)
-3. **RP-02c**: Report excellence hardening (post-Billing micro-step)
-4. **MEM-01**: Memory domain tables
-5. **MEM-02**: Post-run memory transformation
-6. **RT-01**: ARQ background worker
-7. **FE-01**: Workspace pages
-8. **FE-03**: Component files
+### HIGH priority items (remaining)
+1. **RP-02c**: Report excellence hardening
+2. **MEM-01**: Memory domain tables
+3. **MEM-02**: Post-run memory transformation
+4. **RT-01**: ARQ background worker
+5. **FE-01**: Workspace pages
+6. **FE-03**: Component files
 
-### MEDIUM priority items
-8. **RT-02**: Interview bridge
-9. **RP-01**: Report evidence links
-10. **RP-02**: Report chat
-11. **RP-04**: NLP sentiment analysis
-12. **POP-01**: Per-segment stance assignment
-13. **POP-03**: Agent Atlas API
-14. **KS-01**: Knowledge domain tables
-15. **KS-02**: File upload
-16. **BIL-02**: Full credit formula
-17. **BIL-04**: Subscriptions table
-18. **ADM-01**: Admin panel API
-19. **ADM-02**: Audit logs
-20. **ADM-03**: require_admin() real check
-21. **ADM-04**: Team management API
-22. **INF-02**: Object storage adapter
+### MEDIUM priority items (remaining)
+- **RT-02**: Interview bridge
+- **RP-01**: Report evidence links table
+- **RP-02**: Report chat (interactive)
+- **RP-02b**: Report section generation fragility
+- **RP-04**: NLP sentiment analysis
+- **POP-01**: Per-segment stance assignment
+- **POP-03**: Agent Atlas API
+- **KS-01**: Knowledge domain tables
+- **KS-02**: File upload
+- **BIL-04**: Subscriptions table
+- **BIL-07**: Plan change API
+- **BIL-08**: Payment provider integration
+- **ADM-05**: Workspace create/rename/archive API
+- **INF-02**: Object storage adapter
 
-### LOW priority items
-23-33: RT-03, RT-04, RT-05, RP-03, RP-05, POP-02, POP-04, BIL-05, FE-02, FE-04, INF-01, INF-03, DM-01, DM-02
+### LOW priority items (remaining)
+RT-03, RT-04, RT-05, RP-03, RP-05, POP-02, POP-04, BIL-05, BIL-05b, BIL-05c, BIL-05e, BIL-06, ADM-03b, ADM-06, FE-02, FE-04, INF-01, INF-03, DM-01, DM-02
+
+### DONE items (completed in previous steps)
+BIL-01, BIL-02, BIL-03, BIL-05d, ADM-01, ADM-02, ADM-03, ADM-04
