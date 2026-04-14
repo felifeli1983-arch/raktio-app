@@ -746,10 +746,17 @@ The backend population/memory system must support:
   - `agent_topic_exposure` — topic exposure tracking (counts, stance tendency)
   - `memory_update_jobs` — post-run transformation tracking
 - **Repository implemented** — full CRUD with upsert support
+- **Memory transformation implemented** (Step 10.5B):
+  - `memory_service.transform_run_to_memory()` auto-runs after OASIS completion
+  - Creates episodic memory from posts, comments, behavioral stances, follows, mutes
+  - Updates relationship memory from interaction matrix
+  - Updates topic exposure from hashtag extraction (LLM extraction deferred: MEM-02b)
+  - Updates rolling summaries with sim count, activity, stance
+  - Tracked via `memory_update_jobs`
 - **NOT YET IMPLEMENTED**:
-  - Post-run memory transformation service (Step 10.5B) — trace events → episodes
   - Memory-informed agent prompts (Step 10.5C) — feed memory into OASIS UserInfo
   - runtime_stance still set once at assembly, never updated
+  - LLM-based topic extraction (MEM-02b) — currently hashtag-only
 
 ### Private audiences
 - Schema supports `is_private` flag on audiences and `population_tier` on agents

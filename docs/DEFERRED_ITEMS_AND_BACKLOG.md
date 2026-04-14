@@ -205,15 +205,20 @@
 - **Description**: 5 tables live (migration 008, 25 tables total): `agent_memory_summaries`, `agent_episodic_memory`, `agent_relationship_memory`, `agent_topic_exposure`, `memory_update_jobs`. Full repository implemented with upsert, batch insert, query functions.
 - **Status**: DONE (Step 10.5A)
 
-### MEM-02: Post-run memory transformation
+### MEM-02: Post-run memory transformation ✅ DONE
 - **Area**: Memory
-- **Description**: After a simulation completes, agent memories should be updated with what they experienced. `simulation_participations.runtime_stance` is set once and never updated. No service converts trace events into episodic memory, relationship updates, or topic exposure.
-- **Why deferred**: Requires MEM-01 tables + memory service + LLM-based episode extraction.
-- **Dependencies**: MEM-01, event_bridge evidence bundle
-- **Priority**: HIGH
-- **Type**: Missing feature
-- **Related files**: `services/memory_service.py` (stub), `AGENTS_AUDIENCE_MEMORY.md`
-- **Recommended step**: Dedicated memory system step
+- **Description**: `memory_service.transform_run_to_memory()` reads evidence bundle, creates episodic memories, updates relationships, topic exposures, and rolling summaries. Auto-triggered after OASIS completion in `oasis_worker.py`. Tracked via `memory_update_jobs`.
+- **Status**: DONE (Step 10.5B)
+
+### MEM-02b: LLM-based episode extraction
+- **Area**: Memory
+- **Description**: Current topic extraction uses simple hashtag parsing (`#tag` → topic). Content without hashtags produces no topic exposure. LLM-based extraction (sending post/comment content to Claude for semantic topic/entity extraction) would produce richer, more accurate memory.
+- **Why deferred**: Hashtag extraction works for posts that use hashtags. LLM extraction adds cost (one LLM call per post/comment) and latency to post-run transformation.
+- **Dependencies**: None
+- **Priority**: MEDIUM
+- **Type**: Enhancement
+- **Related files**: `services/memory_service.py` `_extract_topics()`
+- **Recommended step**: Memory refinement pass
 - **Status**: DEFERRED
 
 ### MEM-03: Belief trajectory over time

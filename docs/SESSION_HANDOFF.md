@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 10.5A — Memory System Tables**
+> Last completed step: **Step 10.5B — Memory Transformation Service**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -47,7 +47,7 @@
 | 9 | Admin Panel API | **PASS** |
 | 10 | Team & Governance API | **PASS** |
 | 10.5A | Memory domain tables (migration 008) | **PASS** |
-| 10.5B | Post-run memory transformation service | NOT STARTED |
+| 10.5B | Post-run memory transformation service | **PASS** |
 | 10.5C | Memory-informed agent context | NOT STARTED |
 | 10.5D | Distribution: temporal activity multipliers | NOT STARTED |
 | 10.5E | Distribution: influence-weighted reach | NOT STARTED |
