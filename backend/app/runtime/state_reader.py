@@ -1,14 +1,10 @@
 """
 Raktio Runtime — State Reader
 
-Reads the current state of a running simulation for display in
-the Simulation Canvas. Combines product DB state with runtime
-SQLite data.
+Reads the current state of a running or completed simulation for
+display in the Simulation Canvas and SSE stream.
 
-Used by:
-  - GET /api/simulations/{id} (enriched with runtime state)
-  - SSE stream endpoint (live updates)
-  - Canvas modes (feed, network, timeline, geo, segments)
+Combines product DB state (Supabase) with runtime SQLite data (OASIS).
 """
 
 from __future__ import annotations
@@ -16,34 +12,24 @@ from __future__ import annotations
 import uuid
 from typing import Any, Optional
 
-from app.db.supabase_client import get_supabase
-from app.runtime.event_bridge import get_event_counts, read_events_from_sqlite
+from app.repositories import simulations as sim_repo
+from app.runtime.event_bridge import (
+    get_event_counts,
+    get_trace_action_summary,
+    read_events_from_trace,
+)
 
 
 def get_run_state(simulation_id: uuid.UUID) -> Optional[dict[str, Any]]:
     """
-    Get the current runtime state for a simulation's active run.
+    Get the current runtime state for a simulation's latest run.
 
-    Returns:
-        Dict with run status, event counts, simulated time, etc.
-        None if no active run exists.
+    Returns dict with run status, event counts, action summary, etc.
     """
-    sb = get_supabase()
-
-    # Find the latest run for this simulation
-    result = (
-        sb.table("simulation_runs")
-        .select("*")
-        .eq("simulation_id", str(simulation_id))
-        .order("started_at", desc=True)
-        .limit(1)
-        .execute()
-    )
-
-    if not result.data:
+    run = sim_repo.get_latest_run(simulation_id)
+    if not run:
         return None
 
-    run = result.data[0]
     run_state: dict[str, Any] = {
         "run_id": run["run_id"],
         "status": run["status"],
@@ -55,10 +41,11 @@ def get_run_state(simulation_id: uuid.UUID) -> Optional[dict[str, Any]]:
         "runtime_metadata": run.get("runtime_metadata_json", {}),
     }
 
-    # If we have a SQLite path, read event counts
+    # Read real event counts from SQLite if path exists
     sqlite_path = run.get("sqlite_path")
     if sqlite_path:
         run_state["event_counts"] = get_event_counts(sqlite_path)
+        run_state["action_summary"] = get_trace_action_summary(sqlite_path)
 
     return run_state
 
@@ -69,25 +56,18 @@ def get_recent_events(
     limit: int = 50,
 ) -> list[dict[str, Any]]:
     """
-    Get recent events from a simulation's active run.
-    Used for live feed updates in the canvas.
+    Get recent events from a simulation's active run via trace table.
+    Used for live feed updates in the canvas and SSE stream.
     """
-    sb = get_supabase()
-
-    result = (
-        sb.table("simulation_runs")
-        .select("sqlite_path")
-        .eq("simulation_id", str(simulation_id))
-        .order("started_at", desc=True)
-        .limit(1)
-        .execute()
-    )
-
-    if not result.data or not result.data[0].get("sqlite_path"):
+    run = sim_repo.get_latest_run(simulation_id)
+    if not run or not run.get("sqlite_path"):
         return []
 
-    sqlite_path = result.data[0]["sqlite_path"]
-    events = read_events_from_sqlite(sqlite_path, since_row_id, limit)
+    events = read_events_from_trace(
+        run["sqlite_path"],
+        since_rowid=since_row_id,
+        limit=limit,
+    )
 
     return [
         {
@@ -100,6 +80,7 @@ def get_recent_events(
             "content": e.content,
             "sentiment": e.sentiment,
             "metadata": e.metadata,
+            "recorded_at": e.recorded_at,
         }
         for e in events
     ]
