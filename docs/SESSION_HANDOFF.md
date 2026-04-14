@@ -415,10 +415,14 @@ This prerequisite block must complete before Step 8 begins.
 - Background task dispatch enables concurrent SSE consumption during live runs
 - TestClient limitation: can't test truly concurrent background+SSE (requires real uvicorn). Verified via two-phase test (run OASIS → read SSE from completed DB).
 
-**Step 7.5E — Report evidence handoff**
-1. Gather real runtime evidence after completion (posts, actions, agent counts)
-2. Feed evidence into report_service._generate_section() as sim_context
-3. Reports cite real events and metrics
+**Step 7.5E — Report evidence handoff** ✅ COMPLETED
+- `report_service.py` imports `build_evidence_bundle()` from event_bridge
+- `sim_context` includes `runtime_evidence` with: event counts, action summary, top posts (content + engagement), sample comments (content + attribution), per-agent activity breakdown, exposure records
+- `_generate_section()` builds structured evidence prompt for each section
+- System prompt instructs Claude to cite real evidence when `has_runtime_evidence=true`
+- Tested: 3-agent OASIS run → 14/14 report sections generated, ALL reference real agents and real metrics
+- Reports are now genuinely evidence-backed, not speculative
+- Stream adapter cleanup: Option B chosen — polling is official temporary model, adapter documented as DEFERRED, singleton commented out, no active imports
 
 **Step 7.5F — Compare evidence handoff**
 1. Compare reads real reports + runtime event counts from both runs
