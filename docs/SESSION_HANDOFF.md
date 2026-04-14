@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 7.5E1 — Evidence Precision Hardening**
+> Last completed step: **Step 7.5F — Compare Evidence Handoff**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -39,7 +39,7 @@
 | **7.5E** | Report evidence handoff | **PASS** |
 | **7.5E0** | Population quality hardening | **PASS** |
 | **7.5E1** | Evidence precision hardening | **PASS** |
-| 7.5F | Compare evidence handoff | NOT STARTED |
+| 7.5F | Compare evidence handoff | **PASS** |
 | 7.5G | Credit settlement | NOT STARTED |
 | 8 | Billing / Credits | BLOCKED by 7.5 |
 | 9 | Admin Panel API | NOT STARTED |

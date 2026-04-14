@@ -672,3 +672,9 @@ A Raktio report must:
 - Interview-informed report sections
 - Export to PDF
 - Share via link
+
+### Compare system (updated 2026-04-14)
+- **Evidence-backed**: compare_service reads `build_evidence_bundle()` from BOTH simulations' SQLite DBs
+- **Evidence in prompt**: event counts, top posts (quoted), agent activity, belief indicators, interaction matrix — for both runs side-by-side
+- **Output structure**: `evidence_quality` (full/partial/config_only), `metric_comparison` with real counts, each `key_difference` tagged with `evidence_type` (metric/behavioral/inferred)
+- **Tested**: two 2-agent OASIS runs compared → evidence_quality=full, winner determined from real data, 6 differences citing real agents
