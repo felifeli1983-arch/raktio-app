@@ -241,6 +241,8 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 | `runtime_failure_records` separate table not created | Failures visible via admin/runtime from simulation_runs | LOW |
 | Memory topic extraction is hashtag-only (no NLP) | Posts without hashtags get no topic memory | MEM-02b |
 | Memory summary text is formulaic | No LLM synthesis — says "Participated in N simulation(s)" | MEM-02c |
+| Memory episode dedup not guarded on re-transformation | Double-run inserts duplicate episodes | MEM-02d |
+| Memory relationship strength doesn't accumulate across runs | Upsert overwrites per-run, doesn't sum | MEM-02e |
 | Memory N+1 queries at scale | 1000+ agents = 1000+ individual DB queries | MEM-02f |
 | No subscription/plan change/payment API | Requires BIL-04 to BIL-08 | Post-launch |
 | Group actions (5) not enabled in OASIS | Group simulation features deferred | Later step |
