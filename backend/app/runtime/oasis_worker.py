@@ -286,6 +286,21 @@ async def run_oasis_simulation(
             failed=False,
         )
 
+    # ── 11. Memory transformation (successful runs only) ──
+    if final_status == "completed":
+        try:
+            import uuid as uuid_mod
+            from app.services.memory_service import transform_run_to_memory
+            mem_result = await transform_run_to_memory(
+                uuid_mod.UUID(simulation_id),
+                uuid_mod.UUID(workspace_id),
+            )
+            execution_summary["memory_transformation"] = mem_result
+            logger.info(f"Memory transformation: {mem_result.get('episodes_created', 0)} episodes")
+        except Exception as exc:
+            logger.warning(f"Memory transformation failed (non-blocking): {exc}")
+            execution_summary["memory_transformation"] = {"status": "failed", "error": str(exc)[:200]}
+
     execution_summary["final_status"] = final_status
     execution_summary["sqlite_path"] = sqlite_path
 
