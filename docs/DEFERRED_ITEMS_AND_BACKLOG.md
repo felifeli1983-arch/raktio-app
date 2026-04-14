@@ -1,7 +1,7 @@
 # Deferred Items and Backlog
 
 > Central source of truth for all deferred, partial, blocked, or missing items.
-> Last synchronized: 2026-04-14 (after Step 7.5F)
+> Last synchronized: 2026-04-14 (after Step 7.5G — Step 7.5 block complete)
 
 ---
 
@@ -236,16 +236,10 @@
 
 ## Billing
 
-### BIL-01: Credit settlement on completion
+### BIL-01: Credit settlement on completion ✅ DONE
 - **Area**: Billing
-- **Description**: When a simulation completes, actual credit cost should be calculated from real execution metrics and settled (reserved → final deduction). `simulation_finalization` ledger event not implemented.
-- **Why deferred**: This is Step 7.5G — next in the pipeline.
-- **Dependencies**: OASIS runtime (done), credit reservation (done)
-- **Priority**: HIGH
-- **Type**: Missing feature
-- **Related files**: `runtime/launcher.py`, `repositories/billing.py`, `PRICING_AND_CREDITS.md`
-- **Recommended step**: Step 7.5G
-- **Status**: READY
+- **Description**: `_settle_credits()` in `oasis_worker.py` calculates actual cost from real execution, settles reserved→final, creates `simulation_finalization` ledger entry, handles partial refund.
+- **Status**: DONE (Step 7.5G)
 
 ### BIL-02: Full credit cost formula
 - **Area**: Billing
@@ -261,13 +255,13 @@
 ### BIL-03: Billing service + API
 - **Area**: Billing
 - **Description**: `services/billing_service.py` and `api/billing.py` are stubs. No plan management, pack purchases, usage history, or upgrade prompts.
-- **Why deferred**: Blocked by Step 7.5G (credit settlement).
-- **Dependencies**: BIL-01
+- **Why deferred**: Was blocked by Step 7.5G (now complete).
+- **Dependencies**: BIL-01 (done)
 - **Priority**: HIGH
 - **Type**: Missing feature
 - **Related files**: `services/billing_service.py` (stub), `api/billing.py` (stub), `PRICING_AND_CREDITS.md`
 - **Recommended step**: Step 8
-- **Status**: BLOCKED
+- **Status**: READY
 
 ### BIL-04: Subscriptions table
 - **Area**: Billing
@@ -452,8 +446,8 @@
 ## Priority Summary
 
 ### HIGH priority items
-1. **BIL-01**: Credit settlement (Step 7.5G — next)
-2. **BIL-03**: Billing service + API (Step 8 — blocked by 7.5G)
+1. ~~**BIL-01**: Credit settlement~~ ✅ DONE
+2. **BIL-03**: Billing service + API (Step 8 — now READY)
 3. **MEM-01**: Memory domain tables
 4. **MEM-02**: Post-run memory transformation
 5. **RT-01**: ARQ background worker

@@ -696,3 +696,14 @@ The commercial system must support:
 - `plans`: live (with pricing fields from migration 002)
 - `subscriptions`: NOT YET CREATED
 - `credit_purchases`: NOT YET CREATED
+
+### Credit settlement (updated 2026-04-14, Step 7.5G)
+- **Implemented**: `_settle_credits()` in `runtime/oasis_worker.py`
+- Full completion: actual_cost = reserved (no refund)
+- Partial completion: actual_cost = reserved × (steps_completed / steps_total)
+- Failed (0 steps): actual_cost = 0 (full refund)
+- Creates `simulation_finalization` ledger entry with actual cost
+- Creates `refund` ledger entry if partial refund applies
+- Settles reserved→0, adjusts available for any refund
+- Updates `simulations.credit_final` to actual cost
+- **Tested**: 2-agent 2-step full completion → reserved=1, actual=1, refund=0
