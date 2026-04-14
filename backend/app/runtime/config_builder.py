@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from app.config import settings
+from app.repositories import memory as mem_repo
 
 
 def build_run_config(
@@ -152,7 +153,16 @@ def build_run_config(
 
 
 def _build_agent_description(agent: dict, participant: dict) -> str:
-    """Build a human-readable description for OASIS UserInfo."""
+    """
+    Build a human-readable description for OASIS UserInfo.
+
+    Includes persistent memory context if the agent has participated
+    in previous simulations. Memory is kept concise to control token usage:
+    - Summary text (max 200 chars)
+    - Top topic exposures (max 5)
+    - Recent stance tendency
+    Total memory addition: ~50-100 words max.
+    """
     parts = []
 
     if agent.get("profession"):
@@ -170,4 +180,59 @@ def _build_agent_description(agent: dict, participant: dict) -> str:
     if interests and isinstance(interests, list):
         parts.append(f"interested in {', '.join(interests[:5])}")
 
+    # Inject persistent memory context (if available)
+    memory_context = _get_memory_context(agent.get("agent_id"))
+    if memory_context:
+        parts.append(memory_context)
+
     return ". ".join(parts) if parts else "A social media user."
+
+
+# Max chars for memory in agent description (controls token bloat)
+_MAX_MEMORY_SUMMARY_CHARS = 200
+_MAX_MEMORY_TOPICS = 5
+
+
+def _get_memory_context(agent_id: str | None) -> str | None:
+    """
+    Build a concise memory context string for an agent.
+
+    Returns None if the agent has no prior memory (first simulation).
+    Returns a bounded string (~50-100 words) for returning agents.
+    """
+    if not agent_id:
+        return None
+
+    try:
+        summary = mem_repo.get_summary(agent_id)
+        if not summary or summary.get("simulation_count", 0) == 0:
+            return None
+
+        parts = []
+
+        # Rolling summary (truncated)
+        summary_text = summary.get("summary_text", "")
+        if summary_text:
+            parts.append(f"Past experience: {summary_text[:_MAX_MEMORY_SUMMARY_CHARS]}")
+
+        # Recent stance
+        stance_info = summary.get("recent_stance_summary", {})
+        if isinstance(stance_info, dict) and stance_info.get("behavioral_stance"):
+            parts.append(f"Recent tendency: {stance_info['behavioral_stance']}")
+
+        # Top topic exposures
+        topics = mem_repo.get_topic_exposures_for_agent(agent_id, limit=_MAX_MEMORY_TOPICS)
+        if topics:
+            topic_strs = []
+            for t in topics:
+                stance = t.get("stance_tendency_on_topic")
+                if stance:
+                    topic_strs.append(f"{t['topic']} ({stance})")
+                else:
+                    topic_strs.append(t["topic"])
+            parts.append(f"Known topics: {', '.join(topic_strs)}")
+
+        return ". ".join(parts) if parts else None
+
+    except Exception:
+        return None  # Memory lookup failure is non-blocking
