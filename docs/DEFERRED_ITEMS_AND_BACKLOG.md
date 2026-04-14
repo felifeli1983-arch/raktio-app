@@ -403,15 +403,31 @@
 - **Recommended step**: Admin refinement pass
 - **Status**: DEFERRED
 
-### ADM-04: Team management API
+### ADM-04: Team management API ✅ DONE
 - **Area**: Governance
-- **Description**: `api/team.py` is a stub. No member invite, role change, workspace management, or team visibility endpoints.
-- **Why deferred**: Step 10.
+- **Description**: 5 team endpoints: list members, invite by email, change role, remove member, list workspaces. Permission enforcement, role authority limits, self-protection, audit logging.
+- **Status**: DONE (Step 10)
+
+### ADM-05: Workspace create/rename/archive API
+- **Area**: Governance
+- **Description**: No API to create, rename, or archive workspaces. Currently workspaces are only created via direct DB insert in tests. TEAM_GOVERNANCE_AND_PERMISSIONS.md specifies workspace management as a workspace_admin capability.
+- **Why deferred**: Core team member management was prioritized. Workspace lifecycle is a refinement.
 - **Dependencies**: None
 - **Priority**: MEDIUM
 - **Type**: Missing feature
-- **Related files**: `api/team.py` (stub), `TEAM_GOVERNANCE_AND_PERMISSIONS.md`
-- **Recommended step**: Step 10
+- **Related files**: `api/team.py`, `repositories/teams.py`
+- **Recommended step**: Governance refinement
+- **Status**: DEFERRED
+
+### ADM-06: Object visibility policies
+- **Area**: Governance
+- **Description**: TEAM_GOVERNANCE_AND_PERMISSIONS.md specifies per-object visibility controls (private to creator, shared to workspace, restricted, org-visible, admin-only). Not implemented — all workspace-scoped objects are visible to all workspace members.
+- **Why deferred**: Requires visibility field on each major object + filtering logic. Significant scope.
+- **Dependencies**: None
+- **Priority**: LOW
+- **Type**: Missing feature
+- **Related files**: `TEAM_GOVERNANCE_AND_PERMISSIONS.md`
+- **Recommended step**: Enterprise governance step
 - **Status**: DEFERRED
 
 ---

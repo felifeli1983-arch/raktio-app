@@ -659,11 +659,24 @@ viewer, contributor, editor, workspace_admin, billing_admin, org_admin, platform
 - `can_manage_org(role)` — org_admin+
 - `can_view_simulation(role)` — all members
 
+### Team API (updated 2026-04-14, Step 10)
+- GET /team/members — list workspace members (with user join)
+- POST /team/members/invite — invite by email
+- PATCH /team/members/{user_id} — change role
+- DELETE /team/members/{user_id} — remove member (soft delete)
+- GET /team/workspaces — list caller's workspaces
+- Permission enforcement: workspace_admin+ required for member management
+- Role authority: workspace_admin can assign viewer→billing_admin. org_admin/platform_admin require higher authority.
+- Self-protection: can't change own role or remove self
+- Audit logging: all governance actions (invite, role change, remove) write to audit_logs
+
+### Admin guard (updated Step 9)
+- `require_admin()` checks DB for `role=platform_admin` — non-admins get 403
+- `audit_logs` table live (migration 007)
+
 ### What is NOT yet implemented
-- `api/team.py` — stub (no member invite, role change, workspace management)
-- `require_admin()` — delegates to `require_user()` (no platform_admin DB check)
+- Workspace create/rename/archive API (ADM-05)
+- Object visibility policies (ADM-06)
 - Admin frontend route blocking (relies on backend 403)
-- Object visibility policies (per-object visibility stored/enforced)
-- Audit logs table
 - Source governance
 - Sharing model
