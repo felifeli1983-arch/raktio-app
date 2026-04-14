@@ -23,23 +23,18 @@ from app.schemas.simulation import (
 
 # ── Credit estimation ──────────────────────────────────────────────────
 
-# Base cost per agent per duration tier (simplified model).
-# Refined cost rules will live in billing/credit_rules.py later.
-_DURATION_MULTIPLIER: dict[str, float] = {
-    "6h": 0.5,
-    "12h": 0.75,
-    "24h": 1.0,
-    "48h": 1.8,
-    "72h": 2.5,
-}
-
-_BASE_COST_PER_AGENT = 1  # 1 credit per agent at 24h baseline
+# Credit estimation — delegates to billing/credit_rules.py for the full formula.
+from app.billing.credit_rules import estimate_credits as _estimate_full
 
 
-def estimate_credits(agent_count: int, duration_preset: str) -> int:
-    """Return an integer credit estimate for a simulation."""
-    multiplier = _DURATION_MULTIPLIER.get(duration_preset, 1.0)
-    return max(1, round(agent_count * _BASE_COST_PER_AGENT * multiplier))
+def estimate_credits(
+    agent_count: int,
+    duration_preset: str,
+    platform_scope: list[str] | None = None,
+    geography_scope: dict | None = None,
+) -> int:
+    """Estimate credits using the full formula (agents × duration × platform × geography)."""
+    return _estimate_full(agent_count, duration_preset, platform_scope, geography_scope)
 
 
 # ── Validation helpers ─────────────────────────────────────────────────
@@ -94,7 +89,10 @@ async def create_simulation(
     org_id = _get_org_for_workspace(workspace_id)
     _check_agent_limit(org_id, data.agent_count_requested)
 
-    credit_est = estimate_credits(data.agent_count_requested, data.duration_preset)
+    credit_est = estimate_credits(
+        data.agent_count_requested, data.duration_preset,
+        data.platform_scope, data.geography_scope,
+    )
     _check_credit_balance(org_id, credit_est)
 
     row = {
@@ -174,7 +172,9 @@ async def update_simulation(
     # Recalculate credit estimate if relevant fields changed
     agent_count = update_data.get("agent_count_requested", existing.agent_count_requested)
     duration = update_data.get("duration_preset", existing.duration_preset)
-    update_data["credit_estimate"] = estimate_credits(agent_count, duration)
+    platforms = update_data.get("platform_scope", existing.platform_scope)
+    geography = update_data.get("geography_scope", existing.geography_scope)
+    update_data["credit_estimate"] = estimate_credits(agent_count, duration, platforms, geography)
 
     if "agent_count_requested" in update_data:
         org_id = _get_org_for_workspace(workspace_id)
