@@ -250,6 +250,13 @@ async def create_compare(
             system=COMPARE_SYSTEM,
             max_tokens=4096,
             temperature=0.3,
+            log_context={
+                "simulation_id": str(base_simulation_id),
+                "compare_id": compare_id,
+                "workspace_id": str(workspace_id),
+                "service_module": "compare_service",
+                "call_purpose": "compare",
+            },
         )
 
         try:

@@ -147,6 +147,10 @@ async def prepare_audience(
                             stance_distribution=stance_dist,
                             platforms=platforms,
                             segment_description=segment_desc,
+                            log_context={
+                                "simulation_id": str(simulation_id),
+                                "workspace_id": str(workspace_id),
+                            },
                         )
                         generated_ids.extend(a["agent_id"] for a in new_agents)
                     except Exception:

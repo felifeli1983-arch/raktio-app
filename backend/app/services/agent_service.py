@@ -114,6 +114,7 @@ async def generate_agents(
     stance_distribution: dict[str, float],
     platforms: list[str],
     segment_description: str = "",
+    log_context: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Generate new synthetic agents via Claude Sonnet.
@@ -140,12 +141,17 @@ async def generate_agents(
     if segment_description:
         prompt += f"Segment context: {segment_description}\n"
 
+    _ctx = dict(log_context or {})
+    _ctx.setdefault("service_module", "agent_service")
+    _ctx.setdefault("call_purpose", f"agent_generation:{country}")
+
     response = await llm_adapter.complete(
         route=ModelRoute.PLANNING,
         messages=[{"role": "user", "content": prompt}],
         system=AGENT_GENERATION_SYSTEM,
         max_tokens=8192,
         temperature=0.8,
+        log_context=_ctx,
     )
 
     # Parse response

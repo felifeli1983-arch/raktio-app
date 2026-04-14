@@ -158,6 +158,12 @@ async def plan_simulation(
             system=PLANNER_SYSTEM,
             max_tokens=4096,
             temperature=0.4,
+            log_context={
+                "simulation_id": str(simulation_id),
+                "workspace_id": str(workspace_id),
+                "service_module": "planner_service",
+                "call_purpose": "planner_recommendation",
+            },
         )
 
         # 4. Parse JSON response

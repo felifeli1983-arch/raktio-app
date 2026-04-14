@@ -114,6 +114,12 @@ async def understand_brief(
             system=BRIEF_UNDERSTANDING_SYSTEM,
             max_tokens=4096,
             temperature=0.3,
+            log_context={
+                "simulation_id": str(simulation_id),
+                "workspace_id": str(workspace_id),
+                "service_module": "brief_service",
+                "call_purpose": "brief_understanding",
+            },
         )
 
         # 4. Parse JSON response

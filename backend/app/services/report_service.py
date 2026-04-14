@@ -166,7 +166,16 @@ async def generate_report(
         try:
             report_repo.update_section(report_id, section_key, {"status": "generating"})
 
-            section_data = await _generate_section(section_key, sim_context, generated_sections)
+            section_data = await _generate_section(
+                section_key, sim_context, generated_sections,
+                log_context={
+                    "simulation_id": str(simulation_id),
+                    "workspace_id": str(workspace_id),
+                    "report_id": report_id,
+                    "service_module": "report_service",
+                    "call_purpose": f"report_section:{section_key}",
+                },
+            )
             generated_sections[section_key] = section_data
 
             from datetime import datetime, timezone
@@ -206,6 +215,7 @@ async def _generate_section(
     section_key: str,
     sim_context: dict[str, Any],
     previous_sections: dict[str, Any],
+    log_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Generate a single report section via Claude Sonnet (REPORT route)."""
 
@@ -380,6 +390,7 @@ async def _generate_section(
         system=REPORT_SYSTEM,
         max_tokens=4096,
         temperature=0.4,
+        log_context=log_context,
     )
 
     try:
