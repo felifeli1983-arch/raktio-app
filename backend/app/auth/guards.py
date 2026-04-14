@@ -133,12 +133,28 @@ def require_admin(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> AuthUser:
     """
-    Dependency: require a valid JWT.
-    Full platform_admin role check is performed inside admin service
-    via DB lookup on workspace_memberships (not in JWT claims).
-    TODO: add DB role lookup when admin service is implemented.
+    Dependency: require a valid JWT AND platform_admin role.
+    Checks workspace_memberships for any membership with role='platform_admin'.
     """
-    return require_user(credentials)
+    user = require_user(credentials)
+
+    from app.db.supabase_client import get_supabase
+    sb = get_supabase()
+    result = (
+        sb.table("workspace_memberships")
+        .select("role")
+        .eq("user_id", str(user.user_id))
+        .eq("role", "platform_admin")
+        .eq("status", "active")
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform admin access required",
+        )
+    return user
 
 
 async def require_workspace_member(
