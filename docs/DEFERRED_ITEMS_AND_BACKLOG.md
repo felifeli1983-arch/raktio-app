@@ -99,6 +99,22 @@
 - **Recommended step**: Report refinement pass
 - **Status**: DEFERRED
 
+### RP-02c: Report excellence hardening (dedicated post-Billing micro-step)
+- **Area**: Reports
+- **Description**: Comprehensive hardening pass on the report generation system to bring it from "works" to "excellent". Covers five areas:
+  1. **Section fragility**: 3/14 sections failed in stress test. Fix prompt growth by truncating/summarizing previous sections, not including full markdown. Consider section-independence classification (which sections need prior context, which don't).
+  2. **Prompt optimization**: Evidence bundle is passed as raw text. Should be structured more compactly. Reduce redundancy between event_counts, agent_activity, and belief_indicators in the prompt.
+  3. **Generation latency**: 14 sections × sequential LLM call = ~570s. Independent sections (simulation_context, outcome_scorecard, evidence, confidence_limitations) can be generated in parallel. Target: <3 minutes for full report.
+  4. **Evidence grounding quality**: Ensure sections like belief_shifts and faction_analysis cite specific trace events, not just aggregate metrics. Consider passing a curated "evidence highlights" subset per section instead of the full bundle.
+  5. **Robustness**: Add retry logic for failed sections (1 retry with simplified prompt). Track which sections fail most often. Consider fallback to shorter prompts for late sections.
+- **Why deferred**: Core pipeline works and produces useful reports. Excellence hardening is a refinement pass that should happen after the billing system is in place (Step 8), so the product has both simulation capability and commercial infrastructure before polish.
+- **Dependencies**: None (all infrastructure exists)
+- **Priority**: HIGH
+- **Type**: Enhancement / quality hardening
+- **Related files**: `services/report_service.py`, `runtime/event_bridge.py`
+- **Recommended step**: Dedicated micro-step after Step 8 (suggested: Step 8.5 or Step 9A)
+- **Status**: DEFERRED
+
 ### RP-03: Report PDF export
 - **Area**: Reports
 - **Description**: No PDF generation from report sections. REPORTS_AND_INSIGHTS_SPEC.md lists export as a key action.
@@ -459,11 +475,12 @@
 ### HIGH priority items
 1. ~~**BIL-01**: Credit settlement~~ ✅ DONE
 2. **BIL-03**: Billing service + API (Step 8 — now READY)
-3. **MEM-01**: Memory domain tables
-4. **MEM-02**: Post-run memory transformation
-5. **RT-01**: ARQ background worker
-6. **FE-01**: Workspace pages
-7. **FE-03**: Component files
+3. **RP-02c**: Report excellence hardening (post-Billing micro-step)
+4. **MEM-01**: Memory domain tables
+5. **MEM-02**: Post-run memory transformation
+6. **RT-01**: ARQ background worker
+7. **FE-01**: Workspace pages
+8. **FE-03**: Component files
 
 ### MEDIUM priority items
 8. **RT-02**: Interview bridge
