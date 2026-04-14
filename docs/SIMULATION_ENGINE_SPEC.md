@@ -747,3 +747,12 @@ user, post, comment, like, dislike, follow, mute, report, rec, trace, comment_li
 - **Step 10.5E**: Influence-weighted reach — publisher authority gradient in recsys/exposure
 - **Step 10.5H**: Platform behavior action weight profiles — per-platform action probabilities (Instagram: more likes less text, LinkedIn: professional framing, TikTok: rapid short reactions)
 - Currently OASIS runs all agents uniformly per step. These upgrades add temporal and social-structural realism.
+
+### Distribution & Influence (updated 2026-04-14, Step 10.5D-E1)
+- **Temporal multipliers**: 7 dayparts (dead→peak), agent activation varies by time. Step 10.5D.
+- **Influence-weighted reach** (3 levels):
+  1. Temporal activation: high-influence agents ×1.2 more likely active
+  2. LLM behavioral guidance: authoritative content + observer guidance in descriptions
+  3. Direct recsys injection: high-influence posts written to rec table (90%/60% probability)
+- **Full Distribution & Virality Layer**: PLANNED as future workstream (DIST-FULL in backlog). Covers timing sensitivity, algorithm behavior, noise context, seeding, archetypes, virality scoring.
+- **Important**: Raktio does NOT claim to predict virality. Spread patterns are scenario-based guidance.

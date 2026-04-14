@@ -71,15 +71,10 @@
 - **Description**: High-influence agents (influence_weight ≥2.0) get ×1.2 activation boost in temporal selection + "high influence" label in OASIS description. Low-influence agents (≤0.5) get ×0.8 reduction + "low influence" label. Combined with activity level and daypart. Probabilistic, not deterministic.
 - **Status**: DONE (Step 10.5E)
 
-### DIST-01b: Direct recsys influence weighting
+### DIST-01b: Direct recsys influence weighting ✅ DONE
 - **Area**: Distribution
-- **Description**: Current influence reach works through temporal activation (more active) and LLM behavioral guidance (more authoritative content). True reach asymmetry would require modifying OASIS's recsys to weight post recommendations by author's `influence_weight`. This means either: (a) forking OASIS Platform to add author-weight to rec scoring, or (b) implementing a custom recsys function that considers author influence. ManualAction like-injection was attempted but proved fragile (OASIS internal state conflicts).
-- **Why deferred**: Requires OASIS Platform modification or custom recsys. Current dual-channel approach (temporal + LLM guidance) produces observable behavioral differences.
-- **Dependencies**: OASIS source modification
-- **Priority**: MEDIUM
-- **Type**: Architecture follow-up
-- **Timing**: CAN WAIT
-- **Status**: DEFERRED
+- **Description**: `_boost_influence_exposure()` directly writes to OASIS rec table after each step. High-influence agents' posts are probabilistically injected into other agents' feeds (90% for weight≥3.0, 60% for weight≥2.0). Combined with temporal activation boost and LLM behavioral guidance.
+- **Status**: DONE (Step 10.5E1)
 
 ### DIST-02: Platform algorithm behavior modeling
 - **Area**: Distribution
@@ -120,6 +115,24 @@
 - **Dependencies**: MEM-02b (better topic extraction)
 - **Timing**: CAN WAIT
 - **Status**: DEFERRED
+
+### DIST-FULL: Full Distribution & Virality Layer (planned future block)
+- **Area**: Distribution / Virality
+- **Description**: A comprehensive realism layer that models how content spreads through social platforms. This is NOT a single feature — it is a planned future workstream that covers:
+  1. **Timing sensitivity** — content performance varies by time-of-day and day-of-week (foundation laid in 10.5D temporal multipliers, but deeper integration with content decay and trending mechanics needed)
+  2. **Publisher authority / reputation** — graduated authority model beyond the current influence_weight binary boost (foundation laid in 10.5E/E1, deeper recsys customization needed)
+  3. **Platform algorithm behavior** — OASIS recsys enhancements: engagement-based promotion, recency decay, trending boost, content-type weighting per platform
+  4. **Competition / noise context** — inject non-topic content to simulate real information environment competition
+  5. **Seeded distribution** — inject the exact content being tested as a seed post at a specific time, observe organic reactions
+  6. **Amplifier archetypes** — post-run classification of agents into spread roles (early adopter, bridge, echo chamber, contrarian, observer)
+  7. **Amplification / virality scoring** — cascade depth, spread speed, reach ratio metrics. MUST be presented as scenario-based guidance ("this pattern tends to spread this way"), NOT as certainty or prediction
+- **Why deferred**: Core simulation works. The current influence model (temporal + LLM + recsys injection) provides meaningful asymmetry. The full virality layer requires deeper OASIS customization and significant product design decisions about how to present spread patterns without overclaiming.
+- **Dependencies**: DIST-01/01b (done), 10.5D (done), OASIS Platform customization for deeper recsys
+- **Priority**: MEDIUM (as a whole block)
+- **Type**: Planned future workstream
+- **Timing**: CAN WAIT — designed as a post-frontend enhancement block
+- **Status**: PLANNED (not started)
+- **Important constraint**: Raktio must NEVER claim to predict real-world virality. The virality layer produces plausible scenario patterns for comparison and iteration, not guarantees.
 
 ### DIST-06: Virality / amplification scoring
 - **Area**: Distribution
