@@ -1,7 +1,7 @@
 # SESSION HANDOFF
 
 > Last updated: 2026-04-14
-> Last completed step: **Step 8D — Cost & Token Intelligence Layer**
+> Last completed step: **Step 8E — log_context propagation (Step 8 COMPLETE)**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
 > Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
 
@@ -43,6 +43,7 @@
 | 7.5G | Credit settlement | **PASS** |
 | 8A-C | Billing / Credits (formula, service, API) | **PASS** |
 | 8D | Cost & Token Intelligence Layer | **PASS** |
+| 8E | log_context propagation across services | **PASS** |
 | 9 | Admin Panel API | NOT STARTED |
 | 10 | Team & Governance API | NOT STARTED |
 | 11 | Frontend Pages | NOT STARTED |
