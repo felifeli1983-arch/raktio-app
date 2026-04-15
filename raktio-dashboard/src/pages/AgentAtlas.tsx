@@ -109,8 +109,13 @@ export default function AgentAtlas() {
             <span className="px-3 py-1.5 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-xs font-bold rounded-lg whitespace-nowrap cursor-pointer transition-colors">Opposing</span>
             <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold rounded-lg whitespace-nowrap cursor-pointer transition-colors">Analysts (NT)</span>
             <span
-              className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-bold rounded-lg whitespace-nowrap cursor-pointer transition-colors"
-              onClick={() => setSearchQuery('influencer')}
+              className={cn(
+                "px-3 py-1.5 text-xs font-bold rounded-lg whitespace-nowrap cursor-pointer transition-colors border",
+                quickFilter === 'influencers'
+                  ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700/50"
+                  : "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+              )}
+              onClick={() => setQuickFilter(quickFilter === 'influencers' ? 'all' : 'influencers')}
             >
               Influencers
             </span>

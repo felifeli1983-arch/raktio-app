@@ -232,6 +232,27 @@ async def prepare_audience(
                     participation_rows[i:i + chunk_size]
                 )
 
+        # 6.5. Ensure influencer archetypes exist among participants (R1A.3)
+        # If no agents in the assembled audience have high influence, tag ~5%
+        influencer_ids = []
+        for aid in all_agent_ids:
+            agent = agent_repo.find_agent_by_id(uuid.UUID(aid))
+            if agent and agent.get("influence_weight", 1.0) >= 3.0:
+                influencer_ids.append(aid)
+
+        if not influencer_ids and len(all_agent_ids) >= 5:
+            # Tag ~5% as influencers (at least 1)
+            count_to_tag = max(1, len(all_agent_ids) // 20)
+            to_tag = random.sample(all_agent_ids, min(count_to_tag, len(all_agent_ids)))
+            from app.db.supabase_client import get_supabase as _get_sb
+            _sb = _get_sb()
+            for aid in to_tag:
+                _sb.table("agents").update({
+                    "influence_weight": round(random.uniform(3.0, 5.0), 1),
+                    "activity_level": "high",
+                }).eq("agent_id", aid).execute()
+            generation_summary["influencers_tagged"] = len(to_tag)
+
         # 7. Update simulation with audience link
         sim_repo.update(simulation_id, workspace_id, {
             "status": "draft",
