@@ -957,10 +957,12 @@ export default function NewSimulation() {
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
                 <button
-                  onClick={() => navigate('/sim/1/canvas')}
-                  className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20"
+                  onClick={handleLaunch}
+                  disabled={stepLoading || !simulationId}
+                  className="flex items-center gap-2 bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-50"
                 >
-                  <Rocket className="w-5 h-5" /> Launch Simulation
+                  {stepLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Rocket className="w-5 h-5" />}
+                  Launch Simulation
                 </button>
               </div>
             </div>
