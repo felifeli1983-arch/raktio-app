@@ -98,13 +98,13 @@
 
 ### DIST-04: Seeded content distribution
 - **Area**: Distribution
-- **Description**: Ability to inject initial "seed" content (the actual post/campaign being tested) at a specific simulated time, then observe organic reactions. Currently the brief influences agent behavior but the exact content being tested isn't posted as a seed.
+- **Description**: Inject the exact post/campaign being tested into OASIS as a seed before the step loop. Agents react to the actual content, not just the topic.
 - **Why it matters**: Users want to test a specific post/message, not just a topic. Seeding lets the simulation react to the exact content.
-- **Priority**: MEDIUM
+- **Priority**: **HIGH — Realism Upgrade R1A.1**
 - **Type**: Missing feature
 - **Dependencies**: None
-- **Timing**: DO BEFORE FRONTEND
-- **Status**: DEFERRED
+- **Timing**: **NEXT IMPLEMENTATION BLOCK**
+- **Status**: PLANNED (R1A)
 
 ### DIST-05: Amplifier archetype detection
 - **Area**: Distribution
@@ -150,13 +150,13 @@
 
 ### INF-06: Stronger influencer agent synthesis
 - **Area**: Influence / Population
-- **Description**: Generate or tag synthetic agents with explicit influencer profiles (fashion influencer, tech thought leader, local community leader). These agents should have high `influence_weight`, appropriate `follower_band`, and domain-specific expertise that makes them realistic test subjects for "how would influencers react" scenarios.
-- **Why it matters**: Brand/agency users want to test influencer-led scenarios (e.g., "what if a fashion influencer promotes this product"). Currently all agents are generic.
-- **Priority**: MEDIUM
+- **Description**: During agent generation, flag 2-5% of agents as influencer archetypes: high influence_weight (≥3.0), large follower_band, domain expertise, authentic voice style. Types: tech thought leader, community advocate, industry analyst, etc.
+- **Why it matters**: "How would influencers react" is a primary enterprise use case. Currently all agents are generically weighted.
+- **Priority**: **HIGH — Realism Upgrade R1A.3**
 - **Type**: Enhancement
-- **Dependencies**: DIST-01 (influence weight matters in reach)
-- **Timing**: DO BEFORE FRONTEND
-- **Status**: DEFERRED
+- **Dependencies**: DIST-01 (done)
+- **Timing**: **NEXT IMPLEMENTATION BLOCK**
+- **Status**: PLANNED (R1A)
 
 ### INF-07: Bridge agent identification
 - **Area**: Influence
@@ -376,13 +376,13 @@
 
 ### POP-01: Per-segment stance assignment
 - **Area**: Population
-- **Description**: Planner provides per-segment `stance_bias`, but audience_service assigns stances globally from `stance_distribution` randomly. Agents don't get segment-appropriate stances.
-- **Why deferred**: Requires segment-to-agent mapping logic (which segment each agent belongs to, based on demographics/psychographics).
-- **Dependencies**: Segment definition model in audience assembly
-- **Priority**: MEDIUM
+- **Description**: Map agents to segments via demographics/psychographics, then apply planner's per-segment `stance_bias` instead of random global assignment.
+- **Why it matters**: A 25-year-old indie dev and a 50-year-old CTO shouldn't get the same random stance distribution.
+- **Dependencies**: None (planner already provides segment data)
+- **Priority**: **HIGH — Realism Upgrade R1A.2**
 - **Type**: Limitation
-- **Related files**: `services/audience_service.py` lines 209-217
-- **Recommended step**: Population refinement step
+- **Related files**: `services/audience_service.py`
+- **Timing**: **NEXT IMPLEMENTATION BLOCK**
 - **Status**: PARTIAL
 
 ### POP-02: Private audience service enforcement

@@ -61,6 +61,19 @@
 | 11.3 | Strategic Review + Doc Sync | **DONE** |
 | 11 P2 | Frontend API Integration | **DONE** |
 | 11 P3 | SSE Canvas Streaming + Auth | **DONE** |
+| 11.4 | DB Audit + Migration 010/011 | **DONE** |
+| 11.5 | E2E Smoke Test (pre-OASIS + runtime) | **DONE** |
+| 11.6 | Report Robustness Hardening (RP-02c) | **DONE** |
+| 11.7 | Geo Upgrade Phase 1 (MapLibre) | **DONE** (rendering upgrade, data still mock) |
+| **R1A** | **Realism Upgrade Phase 1A** | **NEXT** |
+| R1A.1 | Seeded content injection (DIST-04) | NOT STARTED |
+| R1A.2 | Per-segment stance assignment (POP-01) | NOT STARTED |
+| R1A.3 | Influencer archetypes (INF-06) | NOT STARTED |
+| R1A.4 | Confidence scoring formalization | NOT STARTED |
+| R1B | Realism Upgrade Phase 1B | PLANNED |
+| R1B.1 | Platform algorithm amplification (DIST-02) | PLANNED |
+| R1B.2 | NetworkX graph analytics (post-run) | PLANNED |
+| GEO-2 | Geo Data Wiring + Interactivity | PLANNED |
 | 12 | Integration Testing | NOT STARTED |
 
 ---
@@ -463,9 +476,43 @@ Changes:
 - Report always completes 14/14 — scorecard_json now populated
 - System prompt explicitly allows small-sim analysis, forbids hallucination
 
-**Next steps:**
-- Step 12: More comprehensive integration testing with larger agent populations
-- Production readiness (SEC-01 rate limiting, OBS-01 logging, RT-01 ARQ workers)
+**Geo Upgrade Phase 1 (2026-04-15):**
+MapLibre GL replaced Leaflet for Canvas Geo tab. WebGL GPU-accelerated, smooth 60fps, vector tiles.
+Remaining Geo work (GEO-2, planned):
+- Wire real agent location data from simulations to GeoJSON source
+- Add click/hover interactivity (popups with agent/cluster details)
+- Enable MapLibre built-in clustering when agent counts > 100
+- Future: H3-py backend aggregation + H3-js frontend hex heatmaps
+
+---
+
+## Current Priority Order (as of 2026-04-15)
+
+### NEXT: Realism Upgrade R1A (no external dependencies)
+| Item | Description | Effort |
+|------|-------------|--------|
+| R1A.1 — DIST-04 | Seeded content injection: inject exact post into OASIS before step loop | 1 day |
+| R1A.2 — POP-01 | Per-segment stance: map agents to segments, apply per-segment stance_bias | 0.5 day |
+| R1A.3 — INF-06 | Influencer archetypes: 2-5% of agents tagged as high-influence profiles | 1 day |
+| R1A.4 | Confidence scoring: formalize score from agent_count × evidence_density × interaction_diversity | 0.5 day |
+
+### THEN: Realism Upgrade R1B (light integration)
+| Item | Description | Effort |
+|------|-------------|--------|
+| R1B.1 — DIST-02 | Platform algorithm amplification: boost high-engagement posts in rec table | 2 days |
+| R1B.2 | NetworkX graph analytics: post-run centrality, community detection, faction backing | 2 days |
+
+### THEN: Geo Data Wiring (GEO-2)
+| Item | Description | Effort |
+|------|-------------|--------|
+| GEO-2.1 | Wire real agent locations to MapLibre GeoJSON source | 1 day |
+| GEO-2.2 | Add interactivity (click/hover popups with agent details) | 0.5 day |
+| GEO-2.3 | Enable clustering for large agent populations | 0.5 day |
+
+### PRESERVED: Enterprise / Admin / Control-Plane Track
+Admin, governance, and enterprise capabilities must evolve in parallel with product capabilities.
+Major product features must remain governable, controllable, auditable, and supportable.
+Before moving to major new blocks, verify completeness and update docs.
 
 **Enterprise growth track (preserved for future phases):**
 - ENT-01: SSO / SAML

@@ -684,31 +684,38 @@ The Simulation Canvas must:
 - **Geography**: Agent country/city available from Supabase. Geography mode can use real geo data (injected into report evidence in Step 10.6).
 - **14-section reports**: Generated post-completion via Claude REPORT route. Report panel can show progressive sections.
 
-### Frontend Canvas Status (2026-04-15, post Step 11 Phase 1)
+### Frontend Canvas Status (2026-04-15, post Geo Upgrade + API Integration)
 
 **Shell:** Fixed 3-zone layout — left rail filters, main canvas area, right rail live metrics
-**Header:** Simulation name, status badge, agent/round/credit stats, Clone + End & Report buttons
-**Playback:** Pause/Play button, progress slider (Round 1-N), timer display
+**Header:** Real simulation name, status badge, agent/round/credit stats from API, Clone + End & Report buttons
+**Playback:** Pause/Resume via real API (POST pause/resume), progress from SSE run_state events
+**SSE:** Connected to `GET /api/stream/{id}`, live feed posts from events, terminal status banner
 
 **Canvas Modes:**
 | Mode | Status | Details |
 |------|--------|---------|
-| Feed | IMPLEMENTED | Live post stream, viral indicators, stance badges, engagement metrics |
-| Network | IMPLEMENTED | D3 force graph, 80 nodes, zoom, tooltips, click-to-drawer with agent profile |
-| Geo | IMPLEMENTED | Leaflet map with cluster markers, popups, distribution legend |
-| Timeline | PLACEHOLDER | Description card, requires SSE event data for time-series |
+| Feed | LIVE — API CONNECTED | Real-time posts from SSE events, stance badges, engagement metrics |
+| Network | IMPLEMENTED (mock nodes) | D3 force graph, 80 nodes, zoom, tooltips, click-to-drawer |
+| Geo | UPGRADED (MapLibre GL) | WebGL GPU-accelerated, vector tiles, GeoJSON source with data-driven styling. **Mock data — real agent locations not yet wired.** |
+| Timeline | PLACEHOLDER | Description card, requires step-by-step event data |
 | Segments | PLACEHOLDER | Description card, requires audience segment data |
 | Compare | PLACEHOLDER | Description card, links to Compare Lab |
 
-**Left Rail Filters:** Platforms (5: X, Reddit, Instagram, TikTok, LinkedIn), Segments (2), Stance (3), Smart Filters (Influential Agents, Isolate Patient Zero)
-**Right Rail Metrics:** Belief Shift, Toxic Drift alert, Unfollow Rate sparkline, Top Amplifiers, Trending Topics, Run Health (events/sec, polarization, queue depth)
-**Agent Drawer:** Full profile on node click (identity, stance, risk, psych profile, current thought, interview + history buttons)
+**Geo Tab Technology:**
+- Rendering: MapLibre GL JS (WebGL, GPU-accelerated, 60fps pan/zoom)
+- React: react-map-gl/maplibre (declarative components)
+- Tiles: Carto GL dark-matter vector style (crisp at any zoom)
+- Data: GeoJSON Source + Circle/Symbol Layers (data-driven from properties)
+- Previous: Leaflet + react-leaflet (removed)
 
-**Remaining for integration (Step 11 Phase 2-3):**
-- Connect SSE streaming to replace mock data
-- Implement Timeline mode with real step-by-step event data
-- Implement Segments mode with real audience segment breakdowns
-- Implement Compare side-by-side with real dual-simulation data
+**Remaining Geo work (GEO-2):**
+- GEO-2.1: Wire real agent location data to GeoJSON source
+- GEO-2.2: Add click/hover interactivity (popups with agent/cluster details)
+- GEO-2.3: Enable MapLibre built-in clustering for large populations
+- GEO-2.4 (future): H3-py backend aggregation + H3-js hex heatmaps
+
+**Left Rail Filters:** Platforms (5), Segments (2), Stance (3), Smart Filters (2)
+**Right Rail Metrics:** Belief Shift, Toxic Drift alert, Unfollow Rate, Top Amplifiers, Trending Topics, Run Health
 
 ### NOT yet available for Canvas
 - Real-time agent interview (RT-02 deferred)
