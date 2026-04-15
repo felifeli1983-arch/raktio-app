@@ -50,7 +50,6 @@ export default function App() {
             <Route path="/simulations" element={<SimulationsList />} />
             <Route path="/sim/new" element={<NewSimulation />} />
             <Route path="/sim/:id/canvas" element={<LiveFeed />} />
-            <Route path="/sim/:id" element={<Navigate to="/sim/1/canvas" replace />} />
             <Route path="/reports" element={<ReportsList />} />
             <Route path="/reports/:id" element={<Report />} />
             <Route path="/compare" element={<CompareLab />} />

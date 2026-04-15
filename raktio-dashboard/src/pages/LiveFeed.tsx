@@ -8,8 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Map, Source, Layer, Popup, NavigationControl } from 'react-map-gl/maplibre';
-import maplibregl from 'maplibre-gl';
+import { Map, Source, Layer, NavigationControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import * as d3 from 'd3';
 import { simulationsApi, Simulation } from '../lib/api/simulations';
@@ -302,6 +301,18 @@ export default function SimulationCanvas() {
     if (!simId) return;
     try { await simulationsApi.resume(simId); setIsPaused(false); } catch {}
   };
+
+  // Loading gate — show spinner while fetching simulation data
+  if (simLoading) {
+    return (
+      <div className="flex items-center justify-center h-full bg-slate-50 dark:bg-slate-950">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" />
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading simulation...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 overflow-hidden">
@@ -703,7 +714,6 @@ export default function SimulationCanvas() {
             {activeTab === 'Geo' && (
               <div className="absolute inset-0 bg-[#0f172a] overflow-hidden z-0">
                 <Map
-                  mapLib={maplibregl}
                   initialViewState={{ longitude: 10, latitude: 35, zoom: 2.5 }}
                   style={{ width: '100%', height: '100%' }}
                   mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
@@ -772,7 +782,7 @@ export default function SimulationCanvas() {
                         'text-size': 11,
                         'text-offset': [0, 2.2],
                         'text-anchor': 'top',
-                        'text-font': ['Open Sans Bold'],
+                        'text-font': ['Noto Sans Bold', 'Open Sans Bold'],
                       }}
                       paint={{
                         'text-color': '#e2e8f0',
