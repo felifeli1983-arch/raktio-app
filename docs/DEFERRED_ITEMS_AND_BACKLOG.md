@@ -158,6 +158,16 @@
 - **Timing**: **NEXT IMPLEMENTATION BLOCK**
 - **Status**: DONE (R1A, 2026-04-15)
 
+### INF-08: Emergent influencer dynamics
+- **Area**: Influence / Simulation
+- **Description**: Instead of pre-tagging influencer archetypes, let influence emerge from simulation behavior. Agents who receive more likes/follows/quotes during a run naturally become more influential in subsequent rounds. Requires tracking per-agent engagement metrics during the run and feeding them back into the recsys/activation loop. Distinct from static archetype tagging (INF-06).
+- **Why it matters**: Static tagging assigns influence before the simulation runs. Emergent dynamics let the simulation discover who the real amplifiers are — more realistic and more surprising.
+- **Priority**: MEDIUM
+- **Type**: Enhancement / future realism
+- **Dependencies**: INF-06 (done), DIST-02 (platform amplification)
+- **Timing**: Phase R2 or later
+- **Status**: PLANNED (future)
+
 ### INF-07: Bridge agent identification
 - **Area**: Influence
 - **Description**: Identify agents who connect otherwise separate clusters during a simulation. Bridge agents are high-value for understanding cross-segment spread. Currently only inferred in the faction_analysis report section.

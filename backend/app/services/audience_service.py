@@ -232,18 +232,33 @@ async def prepare_audience(
                     participation_rows[i:i + chunk_size]
                 )
 
-        # 6.5. Ensure influencer archetypes exist among participants (R1A.3)
-        # If no agents in the assembled audience have high influence, tag ~5%
-        influencer_ids = []
+        # 6.5. Influencer archetype assignment (R1A.3 — single tagging path)
+        #
+        # Policy: influencer count scales with population size.
+        # Very small sims get zero influencers (all peers).
+        # Larger sims get a graduated percentage that decreases as pop grows.
+        #
+        # Fresh mode: full influencer tagging per simulation.
+        # Persistent mode: lighter tagging (50% rate) — memory creates emergent influence.
+        memory_mode = row.get("memory_mode", "persistent")
+        target_influencer_count = _compute_influencer_count(len(all_agent_ids), memory_mode)
+
+        # Count existing influencers in the assembled audience
+        existing_influencers = 0
         for aid in all_agent_ids:
             agent = agent_repo.find_agent_by_id(uuid.UUID(aid))
             if agent and agent.get("influence_weight", 1.0) >= 3.0:
-                influencer_ids.append(aid)
+                existing_influencers += 1
 
-        if not influencer_ids and len(all_agent_ids) >= 5:
-            # Tag ~5% as influencers (at least 1)
-            count_to_tag = max(1, len(all_agent_ids) // 20)
-            to_tag = random.sample(all_agent_ids, min(count_to_tag, len(all_agent_ids)))
+        # Only tag more if we need to reach the target
+        to_tag_count = max(0, target_influencer_count - existing_influencers)
+        if to_tag_count > 0:
+            # Pick agents that are NOT already influencers
+            candidates = [
+                aid for aid in all_agent_ids
+                if (agent_repo.find_agent_by_id(uuid.UUID(aid)) or {}).get("influence_weight", 1.0) < 3.0
+            ]
+            to_tag = random.sample(candidates, min(to_tag_count, len(candidates)))
             from app.db.supabase_client import get_supabase as _get_sb
             _sb = _get_sb()
             for aid in to_tag:
@@ -252,6 +267,9 @@ async def prepare_audience(
                     "activity_level": "high",
                 }).eq("agent_id", aid).execute()
             generation_summary["influencers_tagged"] = len(to_tag)
+        else:
+            generation_summary["influencers_tagged"] = 0
+        generation_summary["influencers_total"] = existing_influencers + generation_summary["influencers_tagged"]
 
         # 7. Update simulation with audience link
         sim_repo.update(simulation_id, workspace_id, {
@@ -275,6 +293,40 @@ async def prepare_audience(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Audience preparation failed: {exc}",
         )
+
+
+def _compute_influencer_count(total_agents: int, memory_mode: str = "fresh") -> int:
+    """
+    Compute how many influencer agents to tag based on population size.
+
+    Policy:
+    - < 10 agents: 0 (micro-group, all peers)
+    - 10-29: 0 or 1 (30% chance of 1 — small focus group)
+    - 30-99: ~4% (1-3 agents)
+    - 100-499: ~3%
+    - 500-4999: ~2%
+    - 5000+: ~1.5%
+
+    Persistent mode: 50% of normal rate (memory creates emergent influence).
+    """
+    if total_agents < 10:
+        return 0
+    if total_agents < 30:
+        count = 1 if random.random() < 0.3 else 0
+    elif total_agents < 100:
+        count = max(1, round(total_agents * 0.04))
+    elif total_agents < 500:
+        count = max(2, round(total_agents * 0.03))
+    elif total_agents < 5000:
+        count = max(3, round(total_agents * 0.02))
+    else:
+        count = max(5, round(total_agents * 0.015))
+
+    # Persistent mode: lighter forced tagging — memory drives emergent influence
+    if memory_mode == "persistent":
+        count = max(0, count // 2)
+
+    return count
 
 
 def _assign_segment_stance(agent: dict | None, segments: list, default_dist: dict) -> str:

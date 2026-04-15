@@ -234,17 +234,9 @@ async def generate_agents(
         }
         agent_rows.append(agent_row)
 
-    # Flag ~5% as influencer archetypes
-    influencer_count = max(1, len(agent_rows) // 20)
-    influencer_indices = random.sample(range(len(agent_rows)), min(influencer_count, len(agent_rows)))
-    for idx in influencer_indices:
-        agent_rows[idx]["influence_weight"] = round(random.uniform(3.0, 5.0), 1)
-        agent_rows[idx]["activity_level"] = "high"
-        interests = agent_rows[idx].get("interests", [])
-        if not isinstance(interests, list):
-            interests = []
-        interests.append("influencer")
-        agent_rows[idx]["interests"] = interests
+    # NOTE: Influencer tagging is handled in audience_service.py after full
+    # audience assembly — not here during generation. This ensures consistent
+    # influencer policy regardless of whether agents are pool-sourced or generated.
 
     # Batch insert agents
     inserted_agents = agent_repo.insert_agents_batch(agent_rows)
