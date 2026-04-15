@@ -489,12 +489,12 @@ Remaining Geo work (GEO-2, planned):
 ## Current Priority Order (as of 2026-04-15)
 
 ### NEXT: Realism Upgrade R1A (no external dependencies)
-| Item | Description | Effort |
-|------|-------------|--------|
-| R1A.1 — DIST-04 | Seeded content injection: inject exact post into OASIS before step loop | 1 day |
-| R1A.2 — POP-01 | Per-segment stance: map agents to segments, apply per-segment stance_bias | 0.5 day |
-| R1A.3 — INF-06 | Influencer archetypes: 2-5% of agents tagged as high-influence profiles | 1 day |
-| R1A.4 | Confidence scoring: formalize score from agent_count × evidence_density × interaction_diversity | 0.5 day |
+| Item | Description | Backend | Frontend UI |
+|------|-------------|---------|-------------|
+| R1A.1 — DIST-04 | Seeded content injection | Inject seed post into OASIS SQLite before step loop | "Content to test" field in wizard Step 1, seed post badge in Canvas Feed |
+| R1A.2 — POP-01 | Per-segment stance | Map agents→segments, apply per-segment stance_bias | Segment stance bars in wizard Step 4 (Understanding) |
+| R1A.3 — INF-06 | Influencer archetypes | Flag 2-5% agents as influencers during generation | Influencer badge on Agent Atlas cards, influencer filter pill |
+| R1A.4 | Confidence scoring | Compute from agent_count × evidence_density × interaction_diversity | Confidence badge in Report header, 5th metric in scorecard |
 
 ### THEN: Realism Upgrade R1B (light integration)
 | Item | Description | Effort |
