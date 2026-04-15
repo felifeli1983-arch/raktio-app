@@ -417,16 +417,10 @@ Full historical schema audit completed. Found and fixed 5 mismatches:
 4. Billing balance: now includes plan object from organizations→plans join
 5. Agent stance field: frontend fixed to use `base_stance_bias` (DB column name)
 
-**PENDING ACTION: Run migration 011 via Supabase SQL Editor**
-File: `backend/migrations/011_language_fields.sql`
-Contains 3 ALTER TABLE statements adding language columns. Must be run manually
-in the Supabase Dashboard → SQL Editor before language features will persist.
-
-| Tables live | **28 + 3 new columns** (pending migration 011) |
-| Migrations | 001-010 applied, 011 pending manual execution |
+| Tables live | **28 tables, 3 new columns added** |
+| Migrations | 001-011 all applied |
 
 **Next steps:**
-- Run migration 011 in Supabase SQL Editor
 - Step 12: Integration Testing (end-to-end simulation → canvas → report flow)
 
 **Enterprise growth track (preserved for future phases):**
