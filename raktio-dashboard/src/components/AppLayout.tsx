@@ -47,7 +47,7 @@ function SidebarItem({ icon: Icon, label, to, active }: { icon: any, label: stri
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, currentWorkspace, signOut } = useAuth();
+  const { user, currentWorkspace, workspaceError, signOut } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [isDark, setIsDark] = useState(() => {
@@ -219,8 +219,16 @@ export default function AppLayout() {
           </div>
         </header>
 
+        {/* Workspace error banner */}
+        {workspaceError && (
+          <div className="px-6 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300 text-sm shrink-0 flex items-center justify-between">
+            <span>{workspaceError}</span>
+            <button onClick={() => navigate('/settings')} className="text-xs font-bold text-amber-700 dark:text-amber-400 underline ml-4">Settings</button>
+          </div>
+        )}
+
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-auto relative z-10">
+        <div className="flex-1 overflow-auto relative z-10 min-h-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

@@ -26,9 +26,11 @@ interface AuthState {
   loading: boolean;
   workspaces: Workspace[];
   currentWorkspace: Workspace | null;
+  workspaceError: string | null;
 }
 
-interface AuthContextValue extends AuthState {
+interface AuthContextValue extends Omit<AuthState, 'workspaceError'> {
+  workspaceError: string | null;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading: true,
     workspaces: [],
     currentWorkspace: null,
+    workspaceError: null,
   });
 
   // Sync token + workspace to API client whenever they change
@@ -120,12 +123,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const saved = workspaces.find(w => w.workspace_id === savedId);
         const current = saved || workspaces[0] || null;
 
-        setState(s => ({ ...s, workspaces, currentWorkspace: current }));
-        if (current) setWorkspaceId(current.workspace_id);
+        setState(s => ({ ...s, workspaces, currentWorkspace: current, workspaceError: null }));
+        if (current) {
+          setWorkspaceId(current.workspace_id);
+        } else {
+          setState(s => ({ ...s, workspaceError: 'No workspace found. Your account may not have been set up yet.' }));
+        }
+      } else {
+        setState(s => ({ ...s, workspaceError: `Failed to load workspaces (${res.status})` }));
       }
-    } catch {
-      // If workspace fetch fails, user can still be logged in
-      // They just won't have workspace context until it's resolved
+    } catch (err) {
+      setState(s => ({ ...s, workspaceError: 'Could not connect to the server to load workspaces.' }));
     }
   }, []);
 
