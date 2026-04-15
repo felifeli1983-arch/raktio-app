@@ -58,14 +58,11 @@ REPORT_SYSTEM = """You are the Report Generator module of Raktio, a social react
 
 You generate one section of a simulation report at a time.
 
-When runtime_evidence is provided (has_runtime_evidence=true), you MUST:
-- Reference specific posts, comments, and agent actions from the evidence
-- Cite real event counts and agent activity data
-- Quote actual post/comment content as evidence
-- Base findings on what actually happened, not speculation
-
-When runtime_evidence is NOT provided, clearly state that findings are
-based on simulation configuration only.
+Evidence handling rules:
+- When runtime_evidence is provided AND has sufficient data, cite real events, posts, and metrics.
+- When evidence is sparse (few agents, few posts), acknowledge the limitation and provide the best analysis possible with what exists. Do NOT invent data. Do NOT refuse to generate the section.
+- When no runtime evidence is provided, clearly state findings are based on simulation configuration only.
+- A small simulation (< 50 agents) with limited evidence is NORMAL. Always produce useful analysis.
 
 Output valid JSON with this structure:
 {
@@ -82,6 +79,7 @@ Rules:
 - structured_json: machine-readable structured data for the same content
 - When evidence exists, cite specific posts/comments by quoting them
 - Include real metrics (post count, comment count, like count, etc.)
+- If evidence is insufficient for strong conclusions, say so explicitly but still provide the section
 - Always output valid JSON, nothing else
 """
 
@@ -172,13 +170,14 @@ async def generate_report(
         "agent_geography": agent_geo,
     }
 
-    # Generate sections progressively with retry
+    # Generate sections progressively with robust retry
     from datetime import datetime, timezone
     generated_sections = {}
-    max_retries = 1
+    max_retries = 2  # Up to 3 attempts total
 
     for section_key in REPORT_SECTIONS:
         success = False
+        last_error = None
         for attempt in range(max_retries + 1):
             try:
                 report_repo.update_section(report_id, section_key, {"status": "generating"})
@@ -190,7 +189,7 @@ async def generate_report(
                         "workspace_id": str(workspace_id),
                         "report_id": report_id,
                         "service_module": "report_service",
-                        "call_purpose": f"report_section:{section_key}",
+                        "call_purpose": f"report_section:{section_key}" + (f":retry{attempt}" if attempt > 0 else ""),
                     },
                     language=language,
                 )
@@ -208,18 +207,33 @@ async def generate_report(
             except (SystemExit, KeyboardInterrupt):
                 raise
             except Exception as exc:
+                last_error = exc
                 if attempt < max_retries:
-                    continue  # Retry once
-                report_repo.update_section(report_id, section_key, {
-                    "status": "failed",
-                    "content_markdown": f"Section generation failed after {attempt + 1} attempt(s): {exc}",
-                })
+                    continue  # Retry with same prompt
+
+        # If all attempts failed, generate a graceful degradation section
+        if not success:
+            fallback = _generate_fallback_section(section_key, sim_context, str(last_error))
+            generated_sections[section_key] = fallback
+            report_repo.update_section(report_id, section_key, {
+                "status": "completed",
+                "content_markdown": fallback["content_markdown"],
+                "structured_json": fallback.get("structured_json", {}),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            })
 
     # Build summary from executive_summary section
     exec_summary = generated_sections.get("executive_summary", {})
+    scorecard = generated_sections.get("outcome_scorecard", {}).get("structured_json")
     report_repo.update_report(report_id, {
         "status": "completed",
-        "summary_json": exec_summary.get("structured_json"),
+        "summary_json": {
+            **(exec_summary.get("structured_json") or {}),
+            "language": language,
+            "sections_generated": len(generated_sections),
+            "evidence_level": "sparse" if (sim_context.get("agent_count") or 0) < 50 else "standard",
+        },
+        "scorecard_json": scorecard,
         "completed_at": datetime.now(timezone.utc).isoformat(),
     })
 
@@ -242,21 +256,52 @@ async def _generate_section(
 ) -> dict[str, Any]:
     """Generate a single report section via Claude Sonnet (REPORT route)."""
 
+    # Classify evidence strength
+    evidence = sim_context.get("runtime_evidence", {})
+    agent_count = sim_context.get("agent_count") or 0
+    post_count = evidence.get("event_counts", {}).get("post", 0) if evidence else 0
+    comment_count = evidence.get("event_counts", {}).get("comment", 0) if evidence else 0
+    trace_count = evidence.get("event_counts", {}).get("trace", 0) if evidence else 0
+
+    if trace_count > 500 and post_count > 50:
+        evidence_level = "rich"
+    elif trace_count > 50 and post_count > 5:
+        evidence_level = "moderate"
+    else:
+        evidence_level = "sparse"
+
+    # Evidence caveat for prompts
+    evidence_caveat = ""
+    if evidence_level == "sparse":
+        evidence_caveat = (
+            f"\n\nNOTE: This is a {'small ' if agent_count < 50 else ''}simulation with limited evidence "
+            f"({agent_count} agents, {post_count} posts, {comment_count} comments). "
+            f"Provide the best analysis you can with available data. "
+            f"Acknowledge limitations explicitly. Do NOT fabricate data. "
+            f"If insufficient evidence exists for strong conclusions in this section, "
+            f"state what CAN be observed and what cannot.\n"
+        )
+    elif evidence_level == "moderate":
+        evidence_caveat = (
+            f"\n\nNOTE: Moderate evidence available ({agent_count} agents, {post_count} posts). "
+            f"Provide analysis based on what exists. Flag areas with limited confidence.\n"
+        )
+
     section_descriptions = {
         "executive_summary": "Write a concise executive summary of the simulation results. Cover the main takeaway, overall sentiment, key risks identified, and top recommendation.",
         "simulation_context": "Summarize the simulation setup: goal, brief, agent count, duration, geography scope, platform scope, audience composition, recsys choice, and key planner assumptions.",
-        "outcome_scorecard": "Provide a compact evaluation scorecard: overall score, risk score, resonance score, controversy score, adoption potential, polarization score. Use 0-10 scale with labeled bands.",
-        "key_findings": "List the 5-8 most important findings from the simulation. Each finding should be specific and evidence-backed.",
-        "belief_shifts": "Analyze how audience beliefs and opinions shifted during the simulation. Identify which segments changed position and why.",
-        "patient_zero": "Identify the most influential agents/amplifiers in the simulation. Who drove the narrative? Who were early adopters vs resistors?",
-        "segment_analysis": "Break down results by audience segment. How did each segment react differently?",
-        "geography_analysis": "Analyze geographic patterns in the simulation results. Regional variations, hotspots, and cold zones.",
-        "platform_analysis": "Compare results across platforms. How did the conversation differ on each platform?",
-        "exposure_analysis": "Explain what agents saw and how that shaped outcomes. Top exposed content, exposure distribution across segments, recsys effect summary.",
-        "faction_analysis": "Explain social structure changes. Faction emergence, echo chambers, follow clusters, bridge roles, de-escalators.",
-        "recommendations": "Provide 5-8 actionable recommendations based on the simulation results. Be specific and strategic.",
-        "evidence": "Summarize the key evidence supporting the findings. Reference specific events, posts, or patterns.",
-        "confidence_limitations": "Assess the confidence level of this analysis. Note limitations and assumptions.",
+        "outcome_scorecard": "Provide a compact evaluation scorecard: overall score, risk score, resonance score, controversy score, adoption potential, polarization score. Use 0-10 scale with labeled bands. If evidence is limited, provide best estimates and note low confidence.",
+        "key_findings": f"List the {'3-5' if evidence_level == 'sparse' else '5-8'} most important findings from the simulation. Each finding should be specific and evidence-backed where possible.",
+        "belief_shifts": "Analyze how audience beliefs and opinions shifted during the simulation. Use behavioral indicators (likes, dislikes, follows, mutes) as proxies if direct stance data is limited.",
+        "patient_zero": "Identify the most active or influential agents in the simulation based on post counts, engagement received, and follow relationships. If no clear 'patient zero' pattern exists, describe the most notable agents and their behavior." + (" With limited agents, focus on who was most active and what content generated the most engagement." if evidence_level == "sparse" else ""),
+        "segment_analysis": "Break down results by audience segment (profession, demographics, or behavioral patterns). If formal segments are not available, group agents by observed behavior patterns.",
+        "geography_analysis": "Analyze geographic patterns in the simulation results. If agents are concentrated in one region, describe the regional context and note the limited geographic scope rather than claiming regional variation." + (" With agents from a single country, focus on what the geographic concentration means for the findings." if evidence_level == "sparse" else ""),
+        "platform_analysis": "Analyze how the conversation played out on the simulated platform(s). If only one platform was simulated, focus on platform-specific dynamics and behavioral patterns rather than cross-platform comparison.",
+        "exposure_analysis": "Explain what agents saw and how that shaped outcomes. Top exposed content, exposure distribution, and recommendation system effects.",
+        "faction_analysis": "Describe social structure patterns observed: clusters, follow relationships, echo chambers, bridge agents. If interaction data is limited, describe what patterns are visible.",
+        "recommendations": f"Provide {'3-5' if evidence_level == 'sparse' else '5-8'} actionable recommendations based on the simulation results. Be specific and strategic.",
+        "evidence": "Summarize the key evidence supporting the findings. Reference specific events, posts, or patterns. Include the most notable quotes and interactions.",
+        "confidence_limitations": "Assess the confidence level of this analysis. Note limitations from simulation size, evidence density, and methodological assumptions.",
     }
 
     # Build context block — exclude heavy evidence from JSON to stay within token limits
@@ -425,6 +470,7 @@ async def _generate_section(
         f"## Task\n"
         f"Generate the **{section_key}** section.\n"
         f"{section_descriptions.get(section_key, 'Generate this report section.')}\n"
+        f"{evidence_caveat}"
     )
 
     response = await llm_adapter.complete(
@@ -436,17 +482,129 @@ async def _generate_section(
         log_context=log_context,
     )
 
-    try:
-        result = json.loads(response.content)
-    except json.JSONDecodeError:
-        content = response.content
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0].strip()
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0].strip()
-        result = json.loads(content)
-
+    result = _parse_section_json(response.content, section_key)
     return result
+
+
+def _generate_fallback_section(section_key: str, sim_context: dict[str, Any], error_msg: str) -> dict[str, Any]:
+    """
+    Generate a graceful degradation section when LLM generation fails.
+    Always returns valid content — never fails.
+    """
+    agent_count = sim_context.get("agent_count") or 0
+    evidence = sim_context.get("runtime_evidence", {})
+    post_count = evidence.get("event_counts", {}).get("post", 0) if evidence else 0
+    title = section_key.replace("_", " ").title()
+
+    fallback_messages = {
+        "patient_zero": (
+            f"## {title}\n\n"
+            f"With {agent_count} agents and {post_count} posts in this simulation, "
+            f"no clear single-origin cascade pattern (\"patient zero\") was identified. "
+            f"In small simulations, influence tends to be distributed rather than concentrated. "
+            f"The most active agents can be reviewed in the Agent Atlas for behavioral details.\n\n"
+            f"*This section had limited evidence for strong amplifier identification.*"
+        ),
+        "geography_analysis": (
+            f"## {title}\n\n"
+            f"Geographic analysis is limited in this simulation. "
+            f"The agent population {'was concentrated in a single region' if agent_count < 50 else 'had geographic distribution'}. "
+            f"For meaningful geographic comparison, simulations with multi-country agent pools "
+            f"provide richer regional variation data.\n\n"
+            f"*Insufficient geographic diversity for detailed regional analysis.*"
+        ),
+        "faction_analysis": (
+            f"## {title}\n\n"
+            f"With {agent_count} agents, formal faction/cluster analysis produced limited results. "
+            f"Social structure patterns typically emerge more clearly in larger populations (50+ agents). "
+            f"Follow and mute relationships from this run are available in the interaction data.\n\n"
+            f"*Limited agent population for reliable faction identification.*"
+        ),
+    }
+
+    content = fallback_messages.get(section_key, (
+        f"## {title}\n\n"
+        f"This section could not be fully generated from the available simulation evidence "
+        f"({agent_count} agents, {post_count} posts). "
+        f"The analysis may require a larger simulation or richer interaction data.\n\n"
+        f"*Section generation was limited by available evidence.*"
+    ))
+
+    return {
+        "content_markdown": content,
+        "structured_json": {
+            "key_points": [f"Limited evidence for {title.lower()} analysis"],
+            "metrics": {},
+            "evidence_refs": [],
+            "evidence_level": "insufficient",
+        },
+    }
+
+
+def _parse_section_json(raw: str, section_key: str) -> dict[str, Any]:
+    """
+    Robustly parse LLM output into the expected section JSON structure.
+    Tries multiple strategies before giving up.
+    """
+    # Strategy 1: Direct JSON parse
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    # Strategy 2: Extract from ```json ... ``` blocks
+    if "```json" in raw:
+        try:
+            extracted = raw.split("```json")[1].split("```")[0].strip()
+            return json.loads(extracted)
+        except (json.JSONDecodeError, IndexError):
+            pass
+
+    # Strategy 3: Extract from generic ``` ... ``` blocks
+    if "```" in raw:
+        try:
+            extracted = raw.split("```")[1].split("```")[0].strip()
+            return json.loads(extracted)
+        except (json.JSONDecodeError, IndexError):
+            pass
+
+    # Strategy 4: Find JSON-like content between { and }
+    try:
+        start = raw.index("{")
+        # Find the matching closing brace
+        depth = 0
+        for i in range(start, len(raw)):
+            if raw[i] == "{":
+                depth += 1
+            elif raw[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    return json.loads(raw[start:i+1])
+    except (ValueError, json.JSONDecodeError):
+        pass
+
+    # Strategy 5: Treat entire response as markdown content (graceful fallback)
+    # The LLM returned text instead of JSON — wrap it in the expected structure
+    clean_text = raw.strip()
+    if clean_text.startswith("#") or len(clean_text) > 50:
+        return {
+            "content_markdown": f"## {section_key.replace('_', ' ').title()}\n\n{clean_text}",
+            "structured_json": {
+                "key_points": ["Content generated but returned as text instead of structured JSON"],
+                "metrics": {},
+                "evidence_refs": [],
+            },
+        }
+
+    # Strategy 6: Complete failure — return a minimal valid section
+    return {
+        "content_markdown": f"## {section_key.replace('_', ' ').title()}\n\nThis section could not be generated from the available evidence.",
+        "structured_json": {
+            "key_points": ["Section generation produced unparseable output"],
+            "metrics": {},
+            "evidence_refs": [],
+        },
+    }
 
 
 # ── Read operations ────────────────────────────────────────────────────
