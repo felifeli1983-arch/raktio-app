@@ -107,9 +107,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
       if (res.ok) {
         const data = await res.json();
-        const workspaces: Workspace[] = (data.items || data || []).map((w: any) => ({
+        const raw = data.items || data || [];
+        const workspaces: Workspace[] = raw.map((w: any) => ({
           workspace_id: w.workspace_id,
-          name: w.workspace_name || w.name || 'Workspace',
+          // Backend returns nested: { workspaces: { name, slug } }
+          name: w.workspaces?.name || w.workspace_name || w.name || 'Workspace',
           role: w.role || 'viewer',
         }));
 

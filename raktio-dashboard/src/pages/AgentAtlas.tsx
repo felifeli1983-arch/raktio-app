@@ -135,11 +135,11 @@ export default function AgentAtlas() {
                     <h3 className="font-bold text-slate-900 dark:text-white truncate">{name}</h3>
                     <span className={cn(
                       "text-[10px] font-bold px-2.5 py-1 rounded-lg border",
-                      agent.stance_bias === 'Supportive' ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800/50" :
-                      agent.stance_bias === 'Opposing' ? "text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border-rose-100 dark:border-rose-800/50" :
+                      agent.base_stance_bias === 'supportive' ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800/50" :
+                      agent.base_stance_bias === 'opposing' ? "text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 border-rose-100 dark:border-rose-800/50" :
                       "text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/50"
                     )}>
-                      {agent.stance_bias}
+                      {agent.base_stance_bias}
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{agent.profession} • @{agent.username}</p>

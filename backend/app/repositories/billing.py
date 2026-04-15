@@ -13,7 +13,7 @@ from app.db.supabase_client import get_supabase
 
 
 def get_balance(organization_id: str) -> Optional[dict[str, Any]]:
-    """Get credit_balances row for an org."""
+    """Get credit_balances row for an org, including plan info."""
     sb = get_supabase()
     result = (
         sb.table("credit_balances")
@@ -22,7 +22,27 @@ def get_balance(organization_id: str) -> Optional[dict[str, Any]]:
         .limit(1)
         .execute()
     )
-    return result.data[0] if result.data else None
+    if not result.data:
+        return None
+
+    balance = result.data[0]
+    balance["organization_id"] = organization_id
+
+    # Fetch plan info from organization
+    org_result = (
+        sb.table("organizations")
+        .select("plan_id, plans(name, agent_limit, monthly_price, annual_price, included_credits, is_enterprise, feature_flags)")
+        .eq("organization_id", organization_id)
+        .limit(1)
+        .execute()
+    )
+    if org_result.data:
+        org = org_result.data[0]
+        balance["plan"] = org.get("plans") or {"name": org.get("plan_id", "starter")}
+    else:
+        balance["plan"] = None
+
+    return balance
 
 
 def reserve_credits(

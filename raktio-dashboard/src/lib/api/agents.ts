@@ -18,7 +18,7 @@ export interface Agent {
   mbti: string;
   interests: string[];
   values: string[];
-  stance_bias: string;
+  base_stance_bias: string;
   activity_level: string;
   influence_weight: number;
   persuadability: number;

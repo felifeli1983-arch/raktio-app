@@ -409,7 +409,24 @@ Implemented:
 - AppLayout: shows real user email/name, real workspace name/role, real avatar from DiceBear seed
 - `.env.example` created with VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_API_URL
 
+**Database Audit (2026-04-15):**
+Full historical schema audit completed. Found and fixed 5 mismatches:
+1. simulation_language: column added to simulations (migration 011)
+2. source_language: columns added to memory_summaries + episodic_memory (migration 011)
+3. Workspace endpoint: frontend mapping fixed for nested response shape
+4. Billing balance: now includes plan object from organizations→plans join
+5. Agent stance field: frontend fixed to use `base_stance_bias` (DB column name)
+
+**PENDING ACTION: Run migration 011 via Supabase SQL Editor**
+File: `backend/migrations/011_language_fields.sql`
+Contains 3 ALTER TABLE statements adding language columns. Must be run manually
+in the Supabase Dashboard → SQL Editor before language features will persist.
+
+| Tables live | **28 + 3 new columns** (pending migration 011) |
+| Migrations | 001-010 applied, 011 pending manual execution |
+
 **Next steps:**
+- Run migration 011 in Supabase SQL Editor
 - Step 12: Integration Testing (end-to-end simulation → canvas → report flow)
 
 **Enterprise growth track (preserved for future phases):**
