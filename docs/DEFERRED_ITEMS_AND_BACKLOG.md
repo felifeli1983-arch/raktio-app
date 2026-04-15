@@ -104,7 +104,7 @@
 - **Type**: Missing feature
 - **Dependencies**: None
 - **Timing**: **NEXT IMPLEMENTATION BLOCK**
-- **Status**: PLANNED (R1A)
+- **Status**: DONE (R1A, 2026-04-15)
 
 ### DIST-05: Amplifier archetype detection
 - **Area**: Distribution
@@ -156,7 +156,7 @@
 - **Type**: Enhancement
 - **Dependencies**: DIST-01 (done)
 - **Timing**: **NEXT IMPLEMENTATION BLOCK**
-- **Status**: PLANNED (R1A)
+- **Status**: DONE (R1A, 2026-04-15)
 
 ### INF-07: Bridge agent identification
 - **Area**: Influence
@@ -382,7 +382,7 @@
 - **Priority**: **HIGH — Realism Upgrade R1A.2**
 - **Type**: Limitation
 - **Related files**: `services/audience_service.py`
-- **Timing**: **NEXT IMPLEMENTATION BLOCK**
+- **Status**: DONE (R1A, 2026-04-15)
 - **Status**: PARTIAL
 
 ### POP-02: Private audience service enforcement

@@ -65,11 +65,11 @@
 | 11.5 | E2E Smoke Test (pre-OASIS + runtime) | **DONE** |
 | 11.6 | Report Robustness Hardening (RP-02c) | **DONE** |
 | 11.7 | Geo Upgrade Phase 1 (MapLibre) | **DONE** (rendering upgrade, data still mock) |
-| **R1A** | **Realism Upgrade Phase 1A** | **NEXT** |
-| R1A.1 | Seeded content injection (DIST-04) | NOT STARTED |
-| R1A.2 | Per-segment stance assignment (POP-01) | NOT STARTED |
-| R1A.3 | Influencer archetypes (INF-06) | NOT STARTED |
-| R1A.4 | Confidence scoring formalization | NOT STARTED |
+| **R1A** | **Realism Upgrade Phase 1A** | **DONE** |
+| R1A.1 | Seeded content injection (DIST-04) | **DONE** |
+| R1A.2 | Per-segment stance assignment (POP-01) | **DONE** |
+| R1A.3 | Influencer archetypes (INF-06) | **DONE** |
+| R1A.4 | Confidence scoring formalization | **DONE** |
 | R1B | Realism Upgrade Phase 1B | PLANNED |
 | R1B.1 | Platform algorithm amplification (DIST-02) | PLANNED |
 | R1B.2 | NetworkX graph analytics (post-run) | PLANNED |
