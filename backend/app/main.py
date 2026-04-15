@@ -29,7 +29,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # frontend dev
+    allow_origins=[
+        "http://localhost:3000",   # Next.js frontend dev
+        "http://localhost:5173",   # Vite (raktio-dashboard) dev
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

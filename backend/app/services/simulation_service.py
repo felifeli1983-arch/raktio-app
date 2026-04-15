@@ -108,6 +108,7 @@ async def create_simulation(
         "platform_scope": data.platform_scope,
         "geography_scope": data.geography_scope,
         "recsys_choice": data.recsys_choice,
+        "memory_mode": data.memory_mode,
         "credit_estimate": credit_est,
     }
 

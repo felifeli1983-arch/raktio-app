@@ -163,21 +163,51 @@ async def launch_simulation(
         if run_oasis:
             import asyncio
             import logging
-            from app.runtime.oasis_worker import run_oasis_simulation
+            from app.runtime.oasis_worker import (
+                run_oasis_simulation, _finalize_run, _settle_credits,
+            )
+
+            # Configurable timeout: minimum 30 min, 5 min per step
+            duration_steps = runtime_config.get("duration_steps", 24)
+            timeout_seconds = max(1800, duration_steps * 300)
 
             async def _run_in_background():
+                _log = logging.getLogger("raktio.launcher")
                 try:
-                    await run_oasis_simulation(
-                        runtime_config=runtime_config,
-                        simulation_id=str(simulation_id),
-                        workspace_id=str(workspace_id),
-                        run_id=str(run_id),
+                    await asyncio.wait_for(
+                        run_oasis_simulation(
+                            runtime_config=runtime_config,
+                            simulation_id=str(simulation_id),
+                            workspace_id=str(workspace_id),
+                            run_id=str(run_id),
+                        ),
+                        timeout=timeout_seconds,
                     )
+                except asyncio.TimeoutError:
+                    _log.error(
+                        f"Simulation {simulation_id} timed out after {timeout_seconds}s "
+                        f"(duration_steps={duration_steps})"
+                    )
+                    failure_reason = (
+                        f"Simulation exceeded maximum execution time ({timeout_seconds}s)"
+                    )
+                    try:
+                        _finalize_run(
+                            str(simulation_id), str(workspace_id),
+                            str(run_id), "failed", failure_reason,
+                        )
+                        _settle_credits(
+                            str(simulation_id), str(workspace_id),
+                            steps_completed=0,
+                            steps_total=duration_steps,
+                            agent_count=runtime_config.get("agent_count", 0),
+                            duration_preset=runtime_config.get("duration_preset", "24h"),
+                            failed=True,
+                        )
+                    except Exception as cleanup_exc:
+                        _log.error(f"Timeout cleanup failed: {cleanup_exc}")
                 except Exception as exc:
-                    import logging
-                    logging.getLogger("raktio.launcher").error(
-                        f"Background OASIS run failed: {exc}"
-                    )
+                    _log.error(f"Background OASIS run failed: {exc}")
 
             task = asyncio.create_task(_run_in_background())
 

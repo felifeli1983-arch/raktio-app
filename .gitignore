@@ -34,3 +34,6 @@ MiroFish-main/
 # === OASIS runtime logs ===
 backend/log/
 log/
+
+# Build output
+dist/

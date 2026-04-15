@@ -643,12 +643,38 @@ A Raktio report must:
 
 ---
 
-## Implementation Status (as of 2026-04-14)
+## Implementation Status (as of 2026-04-15, post Step 10.6)
+
+### Frontend Report Status (2026-04-15, post Step 11 Phase 1)
+
+**Report Detail Page (`/reports/:id`):**
+- 14-section layout with sidebar navigation (smooth scroll)
+- Executive Summary dark hero card with 4 scorecards (Risk, Resonance, Controversy, Adoption Potential)
+- Recommendation headline in executive summary
+- All 14 sections rendered with mock content:
+  1. Executive Summary, 2. Simulation Context, 3. Outcome Scorecard, 4. Key Findings,
+  5. Belief & Stance Shifts, 6. Patient Zero / Amplifier, 7. Segment Analysis,
+  8. Geography Analysis, 9. Platform Analysis, 10. Exposure & Recommendation,
+  11. Relationship / Factions, 12. Key Evidence (3 quoted posts), 13. Recommendations (Keep/Change/Test),
+  14. Confidence & Limits
+- Header: Back button, title, metadata, Share + Download PDF actions
+- Loading/error state hooks ready for API integration
+
+**Reports List Page (`/reports`):**
+- Table with 5 columns (Name, Type, Date, Risk, Actions)
+- Search, sort dropdown (4 options), pagination
+- 3 stat cards (Reports Generated, Success Rate, Crises Avoided)
+
+**Still NOT implemented:** Report chat (RP-02), PDF export (RP-03), evidence drill-down links (RP-01)
 
 ### Report generation
 - **Progressive 14-section generation** via Claude Sonnet (REPORT route)
 - **Sections**: executive_summary, simulation_context, outcome_scorecard, key_findings, belief_shifts, patient_zero, segment_analysis, geography_analysis, platform_analysis, exposure_analysis, faction_analysis, recommendations, evidence, confidence_limitations
 - **Evidence-backed**: reports receive real runtime evidence from OASIS SQLite via `build_evidence_bundle()`
+- **Step 10.6 improvements**:
+  - Previous sections truncated to 150-char single-line summaries (prevents prompt bloat)
+  - 1 retry per failed section
+  - Agent geography (country, city) injected into report prompt from Supabase
 
 ### Evidence pipeline feeding reports
 | Evidence source | Implemented | Used in prompt |
@@ -662,6 +688,7 @@ A Raktio report must:
 | Exposure history (from refresh traces) | ✓ | ✓ |
 | Interaction matrix (comment/like/follow/mute edges) | ✓ | ✓ |
 | Post reach (per-post exposure to agents) | ✓ | ✓ |
+| Agent geography (country, city from Supabase) | ✓ (Step 10.6) | ✓ |
 | NLP sentiment analysis on content | Not implemented | Not used |
 | Interview outputs | Not implemented | Not used |
 

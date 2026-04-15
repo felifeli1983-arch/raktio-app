@@ -29,6 +29,9 @@ RecsysChoice = Literal["random", "reddit", "personalized", "twhin-bert"]
 
 # ── Request schemas ────────────────────────────────────────────────────
 
+MemoryMode = Literal["persistent", "fresh"]
+
+
 class SimulationCreate(BaseModel):
     """POST /api/simulations — create a new simulation in draft status."""
     name: str = Field(..., min_length=1, max_length=200)
@@ -39,6 +42,8 @@ class SimulationCreate(BaseModel):
     platform_scope: list[str] = Field(default=["x"])
     geography_scope: dict[str, Any] = Field(default_factory=dict)
     recsys_choice: RecsysChoice = "random"
+    memory_mode: MemoryMode = "persistent"  # "persistent" = use memory, "fresh" = clean slate
+    simulation_language: str = "en"  # Language agents use for content (derived from geography, user can override)
 
 
 class SimulationUpdate(BaseModel):
@@ -71,6 +76,8 @@ class SimulationResponse(BaseModel):
     platform_scope: list[str]
     geography_scope: dict[str, Any]
     recsys_choice: RecsysChoice
+    memory_mode: MemoryMode = "persistent"
+    simulation_language: str = "en"
     credit_estimate: Optional[int] = None
     credit_final: Optional[int] = None
     audience_id: Optional[uuid.UUID] = None

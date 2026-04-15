@@ -850,28 +850,57 @@ Overview -> Billing / Team -> Admin / Cost Control / Tenant Management
 
 ---
 
-## Implementation Status (as of 2026-04-14)
+## Implementation Status (2026-04-15, post Step 11 Phase 1)
 
-### Pages implemented
-| Route | Status |
-|-------|--------|
-| `/login` | ✓ Real Supabase signInWithPassword |
-| `/signup` | ✓ Real Supabase signUp + email confirmation |
+### Backend — Complete
+- 46 endpoints across 10 routers, fully implemented and tested
+- 28 tables live (migrations 001-010)
 
-### Pages as placeholder stubs (~35)
-| Route group | Count | Status |
-|-------------|-------|--------|
-| `(app)` — workspace pages | 15 | Stubs (title + subtitle only) |
-| `(admin)` — admin pages | 11 | Stubs |
+### Frontend — Raktio Dashboard (`/raktio-dashboard`)
+Primary frontend: Vite 6 + React 19 + Tailwind CSS 4 + React Router
 
-### Middleware
-- ✓ Route protection via `middleware.ts`
-- Auth pages: redirect to `/overview` if signed in
-- App pages: redirect to `/login?next=` if not signed in
-- Admin pages: no client-side block (relies on backend 403)
+**Shell:**
+- Fixed sidebar (4 groups: Workspace, Intelligence, Operations, Admin)
+- Fixed topbar (search, credit pill, theme toggle, notifications, profile)
+- Scrollable content area with ErrorBoundary
+- Dark mode default, light mode working (localStorage persistence)
+- Loading/error/empty state patterns on 6 core pages
 
-### Components
-- ~40 component files are placeholder stubs
-- `useSimulationStream.ts` hook is implemented (EventSource with reconnection)
+**Implemented Pages (23):**
 
-### Planned for Step 11
+| Route | Page | Status |
+|-------|------|--------|
+| `/` | Landing Page | DONE |
+| `/login` | Login | DONE |
+| `/signup` | Sign Up | DONE |
+| `/onboarding` | Onboarding | DONE |
+| `/pricing` | Pricing | DONE |
+| `/overview` | Workspace Overview | DONE (operational hub) |
+| `/simulations` | Simulations | DONE (status tabs, 3-dot menu) |
+| `/sim/new` | New Simulation | DONE (7-step wizard) |
+| `/sim/:id/canvas` | Simulation Canvas | DONE (3 modes full, 3 placeholder) |
+| `/reports` | Reports List | DONE |
+| `/reports/:id` | Report Detail | DONE (14 sections, sidebar nav) |
+| `/compare` | Compare Lab | DONE (selectors, deltas, actions) |
+| `/audiences` | Audience Studio | DONE (dual-column builder) |
+| `/agents` | Agent Atlas | DONE (split-pane, interview) |
+| `/agents/:id` | Agent Profile | DONE |
+| `/knowledge` | Knowledge & Sources | DONE |
+| `/graph` | Graph Explorer | DONE (placeholder graph, sim selector) |
+| `/billing` | Credits & Billing | DONE |
+| `/integrations` | Integrations | DONE |
+| `/team` | Team & Governance | DONE |
+| `/settings` | Settings | DONE |
+| `/admin` | Admin Control | DONE |
+| `/admin/costs` | Model & Cost Control | DONE |
+| `/admin/audit` | Audit Logs | DONE |
+| `/admin/tenants` | Tenant Management | DONE |
+
+**What remains mock (pending Step 11 Phase 2 — API integration):**
+- All pages use hardcoded mock data
+- No real API calls to backend endpoints yet
+- Canvas SSE streaming not connected
+- Canvas Timeline/Segments/Compare modes are placeholder components
+
+### Next.js Frontend (`/frontend`) — Preserved as reference
+Contains useful assets: Supabase auth middleware, SSE hook (useSimulationStream), TypeScript types (simulation, agent, billing). Pages remain stubs.

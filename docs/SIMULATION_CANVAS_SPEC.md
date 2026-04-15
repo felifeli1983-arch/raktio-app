@@ -665,3 +665,54 @@ The Simulation Canvas must:
 ## Final rule for Claude
 
 **Build the Simulation Canvas as the central operational intelligence surface of Raktio. It must combine live social feed readability with deep observability across relationships, time, geography, segments, and comparison. Never reduce it to a scrolling message list or a decorative dashboard.**
+
+---
+
+## Implementation Status (as of 2026-04-15, post Step 10.6)
+
+### Backend APIs supporting Canvas
+- **SSE streaming**: `GET /api/stream/{sim_id}` — polling-based (2s interval), auth via header or `?token=`. Frontend hook `useSimulationStream.ts` implemented with reconnection logic.
+- **State reader**: `runtime/state_reader.py` — combines Supabase simulation state + OASIS SQLite trace data for canvas rendering.
+- **Simulation lifecycle**: 12 endpoints cover create→understand→plan→prepare-audience→launch→pause/resume/cancel flow.
+- **Agent Atlas API**: `GET /api/agents/{agent_id}` — full profile with memory (episodes, relationships, topics). Available for agent detail panels in canvas.
+
+### Backend realities Canvas must respect
+- **Fresh vs Persistent mode**: `memory_mode` field on simulations. Canvas setup must expose this toggle. In "fresh" mode, agent memory panels show no prior history.
+- **5 platform behavior profiles**: X, Reddit, Instagram, TikTok, LinkedIn. Each with different content_style, hashtag_tendency, peak_hours_shift. Canvas should reflect platform-specific rendering.
+- **Temporal dayparts**: 7 levels (dead→peak). Activity rates vary by simulated hour. Timeline mode should reflect this.
+- **Influence-weighted reach**: 3 levels (temporal activation + LLM guidance + rec table injection). High-influence agents' posts appear more in feeds.
+- **Geography**: Agent country/city available from Supabase. Geography mode can use real geo data (injected into report evidence in Step 10.6).
+- **14-section reports**: Generated post-completion via Claude REPORT route. Report panel can show progressive sections.
+
+### Frontend Canvas Status (2026-04-15, post Step 11 Phase 1)
+
+**Shell:** Fixed 3-zone layout — left rail filters, main canvas area, right rail live metrics
+**Header:** Simulation name, status badge, agent/round/credit stats, Clone + End & Report buttons
+**Playback:** Pause/Play button, progress slider (Round 1-N), timer display
+
+**Canvas Modes:**
+| Mode | Status | Details |
+|------|--------|---------|
+| Feed | IMPLEMENTED | Live post stream, viral indicators, stance badges, engagement metrics |
+| Network | IMPLEMENTED | D3 force graph, 80 nodes, zoom, tooltips, click-to-drawer with agent profile |
+| Geo | IMPLEMENTED | Leaflet map with cluster markers, popups, distribution legend |
+| Timeline | PLACEHOLDER | Description card, requires SSE event data for time-series |
+| Segments | PLACEHOLDER | Description card, requires audience segment data |
+| Compare | PLACEHOLDER | Description card, links to Compare Lab |
+
+**Left Rail Filters:** Platforms (5: X, Reddit, Instagram, TikTok, LinkedIn), Segments (2), Stance (3), Smart Filters (Influential Agents, Isolate Patient Zero)
+**Right Rail Metrics:** Belief Shift, Toxic Drift alert, Unfollow Rate sparkline, Top Amplifiers, Trending Topics, Run Health (events/sec, polarization, queue depth)
+**Agent Drawer:** Full profile on node click (identity, stance, risk, psych profile, current thought, interview + history buttons)
+
+**Remaining for integration (Step 11 Phase 2-3):**
+- Connect SSE streaming to replace mock data
+- Implement Timeline mode with real step-by-step event data
+- Implement Segments mode with real audience segment breakdowns
+- Implement Compare side-by-side with real dual-simulation data
+
+### NOT yet available for Canvas
+- Real-time agent interview (RT-02 deferred)
+- Ask-the-crowd feature
+- NLP sentiment per post (behavioral inference only)
+- Belief trajectory over time (MEM-03 deferred)
+- Platform-specific recsys behavior (PLAT-04b deferred)

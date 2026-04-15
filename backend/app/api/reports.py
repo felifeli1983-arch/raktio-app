@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.auth.guards import WorkspaceContext, require_workspace_member
 from app.auth.permissions import can_create_simulation
@@ -48,6 +48,7 @@ async def get_report(
 async def generate_report(
     simulation_id: uuid.UUID,
     ctx: WorkspaceContext = Depends(require_workspace_member),
+    language: str = Query(default="en", description="Output language for report analysis (e.g., 'en', 'it')"),
 ):
     """Trigger report generation for a simulation."""
     if not can_create_simulation(ctx.member_role):
@@ -56,4 +57,4 @@ async def generate_report(
             detail="Viewers cannot generate reports",
         )
 
-    return await report_service.generate_report(simulation_id, ctx.workspace_id)
+    return await report_service.generate_report(simulation_id, ctx.workspace_id, language=language)

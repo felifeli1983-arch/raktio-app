@@ -667,7 +667,28 @@ This module must support:
 
 ---
 
-## Implementation Status (as of 2026-04-14)
+## Implementation Status (as of 2026-04-15, post Step 10.6)
+
+### Frontend Status (2026-04-15, post Step 11 Phase 1)
+
+**Agent Atlas (`/agents`):**
+- Split-pane layout: left panel (search, filter pills, agent list), right panel (profile detail)
+- Agent cards: avatar, name, handle, role, MBTI, influence score, memory count, stance badge
+- Profile detail: stats grid with tooltips (MBTI, Influence, Memory), Core Beliefs, Simulation History timeline
+- Interview modal: chat UI with typing animation, OASIS IPC status indicator
+- 3-dot menu: Export JSON, locked admin actions (Edit Parameters, Reset Memory)
+- Loading/error state hooks ready for API integration
+
+**Audience Studio (`/audiences`):**
+- Dual-column: left sidebar builder (demographics, psychographics, profession filters), right agent grid
+- Builder: age range, location, MBTI checkboxes, behavioral traits, industry selector
+- Generate Audience button
+- Agent grid cards: avatar, name, ID, role, location, age, MBTI, traits, Interview button
+
+**Agent Profile (`/agents/:id`):**
+- Full profile card with behavioral trait sliders, simulation history, tags
+
+**Not yet implemented:** Audience save/reuse flow (POP-04), advanced multi-filter combinations, platform presence browsing
 
 ### Audience Studio
 - **GET /api/audiences**: list (paginated, workspace-scoped) ✓
@@ -676,10 +697,21 @@ This module must support:
 - **Auto-generated audiences**: created during `prepare-audience` flow ✓
 - **Missing**: create/edit/duplicate endpoints, filter-based selection, source-derived audiences, clone-and-edit
 
-### Agent Atlas
-- **NOT IMPLEMENTED** — `api/agents.py` is a stub
-- No browsing, filtering, or profile viewing API
-- Agents exist in the database with full profiles but have no public API surface
+### Agent Atlas ✅ IMPLEMENTED (Step 10.6)
+- **GET /api/agents**: list/filter global agents by country, stance, with pagination (limit/offset) ✓
+- **GET /api/agents/{agent_id}**: full profile with memory summary, recent episodes, relationships, topic exposures ✓
+- Both endpoints require authentication (`require_user`)
+- Agent memory data is real (from 5 memory tables: summaries, episodes, relationships, topics, jobs)
+- **Missing**: advanced search, multi-filter combinations, platform presence browsing, interview trigger
+
+### Memory System (Step 10.5A-C, refined in 10.6)
+- 5 tables live: `agent_memory_summaries`, `agent_episodic_memory`, `agent_relationship_memory`, `agent_topic_exposure`, `memory_update_jobs`
+- Post-run memory transformation: episodes + relationships + topics + summaries auto-created after OASIS completion
+- Memory-informed agent context: ~200 char memory injection into agent descriptions (past experience, recent stance, known topics)
+- Topic extraction: hashtag-first, keyword frequency fallback (Step 10.6)
+- Relationship strength: accumulative across runs, capped at 1.0 (Step 10.6)
+- Summary text: capped at 500 chars, informative format (Step 10.6)
+- **Fresh vs Persistent mode**: `memory_mode` field on simulations. "fresh" skips memory injection + post-run transformation (Step 10.6)
 
 ### Population quality hardening (Step 7.5E0)
 - Profile validation on LLM output (skip nameless, force country, clamp enums)

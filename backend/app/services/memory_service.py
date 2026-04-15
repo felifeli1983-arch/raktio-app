@@ -78,6 +78,9 @@ async def transform_run_to_memory(
         participants = agent_repo.get_simulation_participants(simulation_id)
         agent_map = _build_agent_map(participants)
 
+        # Track source language for memory records
+        source_language = sim.get("simulation_language", "en")
+
         stats = {
             "episodes_created": 0,
             "relationships_updated": 0,
@@ -86,7 +89,7 @@ async def transform_run_to_memory(
         }
 
         # Episodic memory from posts + comments + behavior
-        episodes = _extract_episodes(evidence, agent_map, str(simulation_id), run_id)
+        episodes = _extract_episodes(evidence, agent_map, str(simulation_id), run_id, source_language=source_language)
         if episodes:
             for i in range(0, len(episodes), 100):
                 mem_repo.insert_episodes_batch(episodes[i:i + 100])
@@ -101,7 +104,7 @@ async def transform_run_to_memory(
 
         # Rolling summaries
         stats["summaries_updated"] = _update_summaries(
-            agent_map, evidence, str(simulation_id),
+            agent_map, evidence, str(simulation_id), source_language=source_language,
         )
 
         mem_repo.update_job(job_id, {
@@ -147,6 +150,7 @@ def _extract_episodes(
     agent_map: dict[str, str],
     simulation_id: str,
     run_id: str,
+    source_language: str = "en",
 ) -> list[dict[str, Any]]:
     """Extract episodic memory entries from evidence."""
     episodes: list[dict[str, Any]] = []
@@ -164,6 +168,7 @@ def _extract_episodes(
             "topic_tags": topics,
             "importance_score": min(1.0, 0.5 + (post.get("num_likes", 0) * 0.1)),
             "linked_trace_ids": [post.get("post_id")],
+            "source_language": source_language,
         })
 
     for comment in evidence.get("comments", []):
@@ -178,6 +183,7 @@ def _extract_episodes(
             "topic_tags": _extract_topics(content),
             "importance_score": 0.4,
             "linked_trace_ids": [comment.get("comment_id")],
+            "source_language": source_language,
         })
 
     belief = evidence.get("belief_indicators", {})
@@ -224,12 +230,54 @@ def _extract_episodes(
 
 
 def _extract_topics(content: str) -> list[str]:
-    """Simple topic extraction from hashtags."""
+    """
+    Extract topics from content. Uses hashtags if available,
+    otherwise falls back to keyword extraction from significant
+    words in the text (nouns, multi-word phrases).
+    """
     if not content:
         return []
+
+    # Try hashtags first
     words = content.split()
     hashtags = [w.lstrip("#").lower() for w in words if w.startswith("#")]
-    return hashtags[:5] if hashtags else []
+    if hashtags:
+        return hashtags[:5]
+
+    # Fallback: extract significant words/phrases from content
+    # Remove common stop words and extract meaningful terms
+    stop_words = {
+        "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+        "have", "has", "had", "do", "does", "did", "will", "would", "could",
+        "should", "may", "might", "shall", "can", "need", "dare", "ought",
+        "used", "to", "of", "in", "for", "on", "with", "at", "by", "from",
+        "as", "into", "through", "during", "before", "after", "above", "below",
+        "between", "out", "off", "over", "under", "again", "further", "then",
+        "once", "here", "there", "when", "where", "why", "how", "all", "both",
+        "each", "few", "more", "most", "other", "some", "such", "no", "nor",
+        "not", "only", "own", "same", "so", "than", "too", "very", "just",
+        "don", "now", "also", "about", "up", "its", "it", "this", "that",
+        "these", "those", "i", "me", "my", "we", "our", "you", "your",
+        "he", "him", "his", "she", "her", "they", "them", "their", "what",
+        "which", "who", "whom", "and", "but", "or", "if", "while", "because",
+        "been", "see", "like", "get", "got", "one", "think", "know", "much",
+        "many", "any", "make", "way", "new", "even", "really", "well",
+    }
+
+    # Extract words 4+ chars, not stop words, lowercased
+    significant = []
+    for word in words:
+        clean = word.strip(".,!?;:\"'()[]{}").lower()
+        if len(clean) >= 4 and clean not in stop_words and clean.isalpha():
+            significant.append(clean)
+
+    # Count frequency and return top terms
+    freq: dict[str, int] = {}
+    for w in significant:
+        freq[w] = freq.get(w, 0) + 1
+
+    top = sorted(freq.items(), key=lambda x: -x[1])
+    return [w for w, _ in top[:5]]
 
 
 def _update_relationships(
@@ -245,9 +293,17 @@ def _update_relationships(
         to_id = agent_map.get(inter.get("to", ""))
         if not from_id or not to_id or from_id == to_id:
             continue
+        # Accumulate strength across runs (read existing + add new)
+        existing_rels = mem_repo.get_relationships_for_agent(from_id, limit=100)
+        existing_strength = 0.0
+        for r in existing_rels:
+            if r.get("other_agent_id") == to_id:
+                existing_strength = r.get("relationship_strength", 0.0)
+                break
+        new_strength = min(1.0, existing_strength + inter.get("count", 1) * 0.15)
         mem_repo.upsert_relationship(from_id, to_id, {
             "relationship_type": "recurring_interactor",
-            "relationship_strength": min(1.0, inter.get("count", 1) * 0.2),
+            "relationship_strength": new_strength,
             "last_interaction_at": now,
             "interaction_summary": f"Commented on their posts {inter.get('count', 1)} time(s)",
         })
@@ -258,9 +314,16 @@ def _update_relationships(
         to_id = agent_map.get(inter.get("to", ""))
         if not from_id or not to_id or from_id == to_id:
             continue
+        existing_rels = mem_repo.get_relationships_for_agent(from_id, limit=100)
+        existing_strength = 0.0
+        for r in existing_rels:
+            if r.get("other_agent_id") == to_id:
+                existing_strength = r.get("relationship_strength", 0.0)
+                break
+        new_strength = min(1.0, existing_strength + inter.get("count", 1) * 0.1)
         mem_repo.upsert_relationship(from_id, to_id, {
             "relationship_type": "recurring_interactor",
-            "relationship_strength": min(1.0, inter.get("count", 1) * 0.15),
+            "relationship_strength": new_strength,
             "last_interaction_at": now,
         })
         updated += 1
@@ -325,6 +388,7 @@ def _update_summaries(
     agent_map: dict[str, str],
     evidence: dict[str, Any],
     simulation_id: str,
+    source_language: str = "en",
 ) -> int:
     """Update rolling memory summaries for all participating agents."""
     updated = 0
@@ -338,13 +402,28 @@ def _update_summaries(
 
         agent_belief = belief.get(username, {})
         agent_acts = activity.get(username, {})
-        act_str = ", ".join(f"{k}: {v}" for k, v in agent_acts.items()) if agent_acts else "no significant activity"
+
+        # Build richer summary (capped at 500 chars to prevent unbounded growth)
+        act_parts = []
+        for k, v in agent_acts.items():
+            if k not in ("refresh", "sign_up", "trend", "do_nothing"):
+                act_parts.append(f"{k.replace('_', ' ')} ({v}x)")
+        act_str = ", ".join(act_parts) if act_parts else "mostly observed"
+
+        stance = agent_belief.get("behavioral_stance", "unknown")
+        ratio = agent_belief.get("reaction_ratio")
+        ratio_str = f" (reaction ratio: {ratio})" if ratio is not None else ""
+
+        # Get top topics from this agent's existing exposure
+        topics = mem_repo.get_topic_exposures_for_agent(agent_id, limit=3)
+        topic_str = ", ".join(t["topic"] for t in topics) if topics else "general"
 
         summary_text = (
-            f"Participated in {sim_count} simulation(s). "
-            f"Last activity: {act_str}. "
-            f"Last stance: {agent_belief.get('behavioral_stance', 'unknown')}."
-        )
+            f"Experienced {sim_count} simulation(s). "
+            f"Most recent: {act_str}. "
+            f"Behavioral tendency: {stance}{ratio_str}. "
+            f"Key topics: {topic_str}."
+        )[:500]  # Hard cap to prevent unbounded growth
 
         mem_repo.upsert_summary(agent_id, {
             "summary_text": summary_text,
@@ -355,6 +434,7 @@ def _update_summaries(
             },
             "simulation_count": sim_count,
             "memory_revision": revision,
+            "source_language": source_language,
             "last_updated_at": datetime.now(timezone.utc).isoformat(),
         })
         updated += 1

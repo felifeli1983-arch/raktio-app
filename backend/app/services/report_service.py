@@ -89,6 +89,7 @@ Rules:
 async def generate_report(
     simulation_id: uuid.UUID,
     workspace_id: uuid.UUID,
+    language: str = "en",
 ) -> dict[str, Any]:
     """
     Generate a full report for a completed simulation.
@@ -123,6 +124,7 @@ async def generate_report(
         "simulation_id": str(simulation_id),
         "run_id": run_id,
         "status": "generating",
+        "summary_json": {"language": language},
     })
     report_id = report["report_id"]
 
@@ -148,6 +150,15 @@ async def generate_report(
     if sqlite_path:
         runtime_evidence = build_evidence_bundle(sqlite_path)
 
+    # Get agent geography data from Supabase (GEO-01)
+    from app.repositories import agents as agent_repo
+    participants = agent_repo.get_simulation_participants(simulation_id)
+    agent_geo: dict[str, str] = {}
+    for p in participants:
+        agent = agent_repo.find_agent_by_id(uuid.UUID(p["agent_id"]))
+        if agent:
+            agent_geo[agent.get("username", "")] = f"{agent.get('city', '')}, {agent.get('country', '')}".strip(", ")
+
     sim_context = {
         "simulation_name": row.get("name"),
         "brief_text": row.get("brief_text"),
@@ -158,43 +169,54 @@ async def generate_report(
         "platforms": row.get("platform_scope"),
         "has_runtime_evidence": bool(runtime_evidence),
         "runtime_evidence": runtime_evidence,
+        "agent_geography": agent_geo,
     }
 
-    # Generate sections progressively
+    # Generate sections progressively with retry
+    from datetime import datetime, timezone
     generated_sections = {}
+    max_retries = 1
+
     for section_key in REPORT_SECTIONS:
-        try:
-            report_repo.update_section(report_id, section_key, {"status": "generating"})
+        success = False
+        for attempt in range(max_retries + 1):
+            try:
+                report_repo.update_section(report_id, section_key, {"status": "generating"})
 
-            section_data = await _generate_section(
-                section_key, sim_context, generated_sections,
-                log_context={
-                    "simulation_id": str(simulation_id),
-                    "workspace_id": str(workspace_id),
-                    "report_id": report_id,
-                    "service_module": "report_service",
-                    "call_purpose": f"report_section:{section_key}",
-                },
-            )
-            generated_sections[section_key] = section_data
+                section_data = await _generate_section(
+                    section_key, sim_context, generated_sections,
+                    log_context={
+                        "simulation_id": str(simulation_id),
+                        "workspace_id": str(workspace_id),
+                        "report_id": report_id,
+                        "service_module": "report_service",
+                        "call_purpose": f"report_section:{section_key}",
+                    },
+                    language=language,
+                )
+                generated_sections[section_key] = section_data
 
-            from datetime import datetime, timezone
-            report_repo.update_section(report_id, section_key, {
-                "status": "completed",
-                "content_markdown": section_data.get("content_markdown", ""),
-                "structured_json": section_data.get("structured_json", {}),
-                "generated_at": datetime.now(timezone.utc).isoformat(),
-            })
+                report_repo.update_section(report_id, section_key, {
+                    "status": "completed",
+                    "content_markdown": section_data.get("content_markdown", ""),
+                    "structured_json": section_data.get("structured_json", {}),
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                })
+                success = True
+                break
 
-        except Exception as exc:
-            report_repo.update_section(report_id, section_key, {
-                "status": "failed",
-                "content_markdown": f"Section generation failed: {exc}",
-            })
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except Exception as exc:
+                if attempt < max_retries:
+                    continue  # Retry once
+                report_repo.update_section(report_id, section_key, {
+                    "status": "failed",
+                    "content_markdown": f"Section generation failed after {attempt + 1} attempt(s): {exc}",
+                })
 
     # Build summary from executive_summary section
     exec_summary = generated_sections.get("executive_summary", {})
-    from datetime import datetime, timezone
     report_repo.update_report(report_id, {
         "status": "completed",
         "summary_json": exec_summary.get("structured_json"),
@@ -216,6 +238,7 @@ async def _generate_section(
     sim_context: dict[str, Any],
     previous_sections: dict[str, Any],
     log_context: dict[str, Any] | None = None,
+    language: str = "en",
 ) -> dict[str, Any]:
     """Generate a single report section via Claude Sonnet (REPORT route)."""
 
@@ -246,7 +269,12 @@ async def _generate_section(
         "has_runtime_evidence": sim_context.get("has_runtime_evidence", False),
     }
 
-    prompt = f"## Simulation Setup\n```json\n{json.dumps(context_for_prompt, indent=2, default=str)}\n```\n\n"
+    # Language instruction for report output
+    lang_map = {"en": "English", "it": "Italian", "es": "Spanish", "fr": "French", "de": "German", "pt": "Portuguese"}
+    lang_name = lang_map.get(language, language)
+    lang_instruction = f"\n\nIMPORTANT: Write all analysis text in {lang_name}. Preserve any evidence quotes (agent posts, comments) in their original language.\n" if language != "en" else ""
+
+    prompt = f"## Simulation Setup\n```json\n{json.dumps(context_for_prompt, indent=2, default=str)}\n```\n{lang_instruction}\n"
 
     # Add runtime evidence if available
     evidence = sim_context.get("runtime_evidence", {})
@@ -372,11 +400,26 @@ async def _generate_section(
             "configuration and planner data only. Findings are speculative.\n\n"
         )
 
+    # Agent geography context (from Supabase, not SQLite)
+    agent_geo = sim_context.get("agent_geography", {})
+    if agent_geo:
+        prompt += "### Agent Geography\n"
+        for agent, loc in agent_geo.items():
+            if loc:
+                prompt += f"- **{agent}**: {loc}\n"
+        prompt += "\n"
+
     # Previous sections for coherence
     if previous_sections:
-        prompt += "## Previous Sections Already Generated\n"
+        # Include only summaries of previous sections to control prompt size
+        # (truncated to 150 chars each to prevent token bloat for later sections)
+        prompt += "## Previous Sections (summaries)\n"
         for key, data in previous_sections.items():
-            prompt += f"### {key}\n{data.get('content_markdown', '')[:400]}\n\n"
+            md = data.get("content_markdown", "")
+            # Take first meaningful line, truncated
+            summary = md.split("\n")[0][:150] if md else "(generated)"
+            prompt += f"- **{key}**: {summary}\n"
+        prompt += "\n"
 
     prompt += (
         f"## Task\n"

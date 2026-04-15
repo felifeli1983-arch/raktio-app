@@ -67,6 +67,12 @@ def build_run_config(
     agent_id_to_participant = {p["agent_id"]: p for p in participants}
     agent_id_to_agent = {a["agent_id"]: a for a in agents}
 
+    # Memory mode: "fresh" skips all memory injection
+    memory_mode = simulation_row.get("memory_mode", "persistent")
+
+    # Simulation language: language agents use for content creation
+    simulation_language = simulation_row.get("simulation_language", "en")
+
     # Determine simulation-level primary platform
     sim_platform_scope = simulation_row.get("platform_scope", ["x"])
     if isinstance(sim_platform_scope, str):
@@ -93,7 +99,7 @@ def build_run_config(
             "agent_id": agent_id,
             "user_name": agent.get("username", f"agent_{i}"),
             "name": agent.get("display_name", f"Agent {i}"),
-            "description": _build_agent_description(agent, participant, sim_primary_platform),
+            "description": _build_agent_description(agent, participant, sim_primary_platform, memory_mode, simulation_language),
             "profile": {
                 "gender": agent.get("gender", ""),
                 "age": agent.get("age", 30),
@@ -125,6 +131,7 @@ def build_run_config(
     duration_steps = hours
 
     # Build final runtime config
+    memory_mode = simulation_row.get("memory_mode", "persistent")
     runtime_config = {
         "simulation_id": str(simulation_id),
         "run_id": str(run_id),
@@ -139,6 +146,7 @@ def build_run_config(
         "brief_text": simulation_row.get("brief_text", ""),
         "primary_platform": sim_primary_platform,
         "peak_hours_shift": sim_platform_profile.peak_hours_shift,
+        "memory_mode": memory_mode,
         "created_at": datetime.utcnow().isoformat(),
     }
 
@@ -150,7 +158,7 @@ def build_run_config(
     return runtime_config
 
 
-def _build_agent_description(agent: dict, participant: dict, platform: str = "x") -> str:
+def _build_agent_description(agent: dict, participant: dict, platform: str = "x", memory_mode: str = "persistent", simulation_language: str = "en") -> str:
     """
     Build a human-readable description for OASIS UserInfo.
 
@@ -207,10 +215,17 @@ def _build_agent_description(agent: dict, participant: dict, platform: str = "x"
     if platform_prompt:
         parts.append(platform_prompt)
 
-    # Inject persistent memory context (if available)
-    memory_context = _get_memory_context(agent.get("agent_id"))
-    if memory_context:
-        parts.append(memory_context)
+    # Inject persistent memory context (if available and mode is persistent)
+    if memory_mode == "persistent":
+        memory_context = _get_memory_context(agent.get("agent_id"))
+        if memory_context:
+            parts.append(memory_context)
+
+    # Language instruction — agents communicate in the simulation's language
+    lang_map = {"en": "English", "it": "Italian", "es": "Spanish", "fr": "French", "de": "German", "pt": "Portuguese", "ja": "Japanese"}
+    lang_name = lang_map.get(simulation_language, simulation_language)
+    if simulation_language != "en":
+        parts.append(f"Communicate in {lang_name}")
 
     return ". ".join(parts) if parts else "A social media user."
 

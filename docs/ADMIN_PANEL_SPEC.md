@@ -620,6 +620,15 @@ They should not read raw runtime internals directly unless through safe, normali
 
 ---
 
+### Admin / Governance Evolution Principle
+
+Admin and governance capabilities must evolve in parallel with product capabilities:
+- Major product features must remain governable, controllable, auditable, and supportable
+- Before moving to major new implementation blocks, verify completeness, update docs/backlog, and audit the latest implemented block
+- Enterprise readiness requires progressive admin parity — every product capability should have a corresponding admin/governance surface
+
+---
+
 ## Final rule for Claude
 
 **Design the admin panel as Raktio’s operational control plane. It must support platform health, simulation oversight, pricing and credit governance, tenant management, population health, model/cost control, and audited intervention workflows. Never reduce it to a simple CRUD dashboard.**
@@ -627,11 +636,11 @@ They should not read raw runtime internals directly unless through safe, normali
 
 ---
 
-## Implementation Status (as of 2026-04-14)
+## Implementation Status (as of 2026-04-15, post Step 10.6)
 
-### Status: IMPLEMENTED (Step 9)
+### Status: IMPLEMENTED (Step 9, updated Step 10.6)
 
-#### Admin API endpoints (8)
+#### Admin API endpoints (9)
 - GET /admin/overview — platform dashboard (sims, population, credits, LLM costs, failures)
 - GET /admin/tenants — list orgs with plan info
 - GET /admin/tenants/{id} — org detail with plan join
@@ -640,14 +649,38 @@ They should not read raw runtime internals directly unless through safe, normali
 - GET /admin/costs — LLM cost summary by route/provider
 - GET /admin/population — agent pool stats with country distribution
 - GET /admin/audit — audit log entries with filters
+- POST /admin/governance — governance actions with audit trail
+
+#### Related APIs now available
+- **Agent Atlas** (GET /api/agents, GET /api/agents/{id}): admin can browse/inspect agent population with memory data
+- **Memory system**: 5 tables live, post-run transformation, memory_update_jobs tracking
+- **Source/Knowledge**: 4 endpoints for source management
 
 #### Auth
 - `require_admin()` checks `workspace_memberships` for `role=platform_admin`
 - Non-admins get 403
 
 #### Tables
-- `audit_logs` live (migration 007, 20 tables total)
+- `audit_logs` live (migration 007, 28 tables total after migrations 001-010)
 - `runtime_failure_records` not created — failure data from simulation_runs
+- `memory_update_jobs` available for memory health monitoring
 
-#### Frontend
-- 11 admin pages remain placeholder stubs (Step 11)
+### Frontend Admin Status (2026-04-15, post Step 11 Phase 1)
+
+**Implemented Pages (4):**
+| Route | Page | Status |
+|-------|------|--------|
+| `/admin` | Admin Control | DONE — system metrics, user management table, service status, security log |
+| `/admin/costs` | Model & Cost Control | DONE — LLM spend metrics, model routing policy table, cost anomaly alerts |
+| `/admin/audit` | Audit Logs | DONE — filter bar, 8-entry table with action badges and status |
+| `/admin/tenants` | Tenant Management | DONE — stat cards, tenant table with plan/status/actions |
+
+**Not yet implemented (remaining from spec):**
+- Runtime Health page (separate from Admin Control)
+- Population Control page (separate from Tenant Management)
+- Pricing & Credits Control page (separate from Model & Cost Control)
+- Plan Management page
+- Failures & Recovery page
+- Source / Storage Oversight page
+
+These 6 remaining admin surfaces can be added progressively as admin needs grow.

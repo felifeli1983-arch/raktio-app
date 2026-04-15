@@ -308,8 +308,9 @@ async def run_oasis_simulation(
             failed=False,
         )
 
-    # ── 11. Memory transformation (successful runs only) ──
-    if final_status == "completed":
+    # ── 11. Memory transformation (successful runs only, persistent mode) ──
+    memory_mode = runtime_config.get("memory_mode", "persistent")
+    if final_status == "completed" and memory_mode == "persistent":
         try:
             import uuid as uuid_mod
             from app.services.memory_service import transform_run_to_memory
@@ -322,6 +323,9 @@ async def run_oasis_simulation(
         except Exception as exc:
             logger.warning(f"Memory transformation failed (non-blocking): {exc}")
             execution_summary["memory_transformation"] = {"status": "failed", "error": str(exc)[:200]}
+    elif final_status == "completed" and memory_mode == "fresh":
+        execution_summary["memory_transformation"] = {"status": "skipped", "reason": "fresh mode"}
+        logger.info("Memory transformation skipped (fresh mode)")
 
     execution_summary["final_status"] = final_status
     execution_summary["sqlite_path"] = sqlite_path

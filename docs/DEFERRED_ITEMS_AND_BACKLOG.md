@@ -1,7 +1,7 @@
 # Deferred Items and Backlog
 
 > Central source of truth for all deferred, partial, blocked, or missing items.
-> Last synchronized: 2026-04-14 (after Step 7.5G — Step 7.5 block complete)
+> Last synchronized: 2026-04-15 (after Step 11 Phase 1 + Strategic Review)
 
 ---
 
@@ -172,15 +172,10 @@
 
 ## Simulation Modes
 
-### SIM-01: Fresh vs memory-informed simulation mode
+### SIM-01: Fresh vs memory-informed simulation mode ✅ DONE
 - **Area**: Simulation
-- **Description**: Users should be able to choose between: (a) **Fresh/baseline** — agents participate without memory context (clean slate, useful for controlled experiments), (b) **Persistent/memory-informed** — agents carry prior memory (realistic longitudinal behavior). This should be a clear option in simulation setup.
-- **Why it matters**: A/B testing requires fresh baselines. Longitudinal campaigns need persistent memory. Both modes are valuable.
-- **Priority**: MEDIUM
-- **Type**: Missing feature
-- **Dependencies**: Memory system (10.5A-C, done)
-- **Timing**: DO BEFORE FRONTEND
-- **Status**: DEFERRED
+- **Description**: Users can choose `memory_mode`: "persistent" (agents carry memory) or "fresh" (clean slate). Field added to SimulationCreate, SimulationResponse, DB (migration 010). config_builder skips memory injection when fresh. oasis_worker skips post-run memory transformation when fresh.
+- **Status**: DONE (Step 10.6)
 
 ### SIM-02: Memory as light influence, not dominant force
 - **Area**: Simulation / Memory
@@ -196,7 +191,7 @@
 
 ## Geography & Platform Realism
 
-### GEO-01: Stronger geography in evidence and reporting
+### GEO-01: Stronger geography in evidence and reporting ✅ DONE
 - **Area**: Geography
 - **Description**: Agent geography exists in Supabase profiles but is not in the OASIS SQLite evidence bundle. Reports and compare cannot do real geography-based analysis — they infer from agent descriptions. Agent country/city should be included in the evidence bundle and the report prompt.
 - **Why it matters**: "Your message works in Milan but fails in Naples" is a key product promise. Without real geo data in evidence, geo analysis sections are speculative.
@@ -204,7 +199,7 @@
 - **Type**: Enhancement
 - **Dependencies**: None
 - **Timing**: DO BEFORE FRONTEND
-- **Status**: DEFERRED
+- **Status**: DONE (Step 10.6) — agent country/city injected into report prompt via agent_repo lookup
 
 ### PLAT-01: LinkedIn runtime behavior model ✅ DONE (prompt-level)
 - **Area**: Platform
@@ -297,7 +292,7 @@
 - **Type**: Product requirement
 - **Dependencies**: None
 - **Timing**: DO AFTER CURRENT BLOCK (Step 10.6 refinement batch)
-- **Status**: DEFERRED — planned for Step 10.6
+- **Status**: PARTIAL — RP-02b done (truncation + retry). Remaining: parallel generation, evidence highlights per section, prompt optimization. CAN WAIT
 
 ---
 
@@ -325,16 +320,10 @@
 - **Recommended step**: Post-Step 8
 - **Status**: DEFERRED
 
-### RP-02b: Report section generation fragility
+### RP-02b: Report section generation fragility ✅ DONE
 - **Area**: Reports
-- **Description**: With 14 sections, later sections receive a very large prompt (all previous sections' markdown is included for coherence). This can cause: JSON parsing failures, token limit issues, or LLM refusals. Stress test showed 11/14 sections succeeded (3 failed). The system is fault-tolerant (failed sections don't block others), but the failure rate needs improvement.
-- **Why deferred**: The core pipeline works. Optimization is a refinement task: truncate previous sections more aggressively, or omit them for independent sections.
-- **Dependencies**: None
-- **Priority**: MEDIUM
-- **Type**: Bug / fragility
-- **Related files**: `services/report_service.py` `_generate_section()` prompt construction
-- **Recommended step**: Report refinement pass
-- **Status**: DEFERRED
+- **Description**: Fixed in Step 10.6. Previous sections truncated to single-line summaries (150 chars each) instead of full markdown. Added 1 retry per section with the same prompt. Reduces prompt bloat from ~4000 chars to ~500 for later sections.
+- **Status**: DONE (Step 10.6)
 
 ### RP-02c: Report excellence hardening (dedicated post-Billing micro-step)
 - **Area**: Reports
@@ -411,16 +400,10 @@
 - **Recommended step**: Enterprise feature step
 - **Status**: DEFERRED
 
-### POP-03: Agent Atlas API
+### POP-03: Agent Atlas API ✅ DONE
 - **Area**: Population
-- **Description**: `api/agents.py` is a stub. No API for browsing, filtering, or viewing agent profiles. The Agent Atlas page (Tier 2 per APP_STRUCTURE_AND_PAGES.md) has no backend.
-- **Why deferred**: Lower priority than runtime pipeline and evidence pipeline.
-- **Dependencies**: None (agents exist in DB with full profiles)
-- **Priority**: MEDIUM
-- **Type**: Missing feature
-- **Related files**: `api/agents.py` (stub), `AUDIENCE_AND_AGENT_ATLAS_SPEC.md`
-- **Recommended step**: Step 10
-- **Status**: DEFERRED
+- **Description**: 2 endpoints: GET /api/agents (list/filter by country, stance, with pagination) and GET /api/agents/{agent_id} (full profile with memory summary, episodes, relationships, topic exposures).
+- **Status**: DONE (Step 10.6)
 
 ### POP-04: Audience creation/edit/duplicate endpoints
 - **Area**: Population
@@ -447,16 +430,10 @@
 - **Description**: `memory_service.transform_run_to_memory()` reads evidence bundle, creates episodic memories, updates relationships, topic exposures, and rolling summaries. Auto-triggered after OASIS completion in `oasis_worker.py`. Tracked via `memory_update_jobs`.
 - **Status**: DONE (Step 10.5B)
 
-### MEM-02b: LLM-based episode extraction
+### MEM-02b: Topic extraction (partial ✅, LLM deferred)
 - **Area**: Memory
-- **Description**: Current topic extraction uses simple hashtag parsing (`#tag` → topic). Content without hashtags produces no topic exposure. LLM-based extraction (sending post/comment content to Claude for semantic topic/entity extraction) would produce richer, more accurate memory.
-- **Why deferred**: Hashtag extraction works for posts that use hashtags. LLM extraction adds cost (one LLM call per post/comment) and latency to post-run transformation.
-- **Dependencies**: None
-- **Priority**: MEDIUM
-- **Type**: Enhancement
-- **Related files**: `services/memory_service.py` `_extract_topics()`
-- **Recommended step**: Memory refinement pass
-- **Status**: DEFERRED
+- **Description**: Keyword fallback implemented in Step 10.6: hashtag-first, then significant word frequency extraction (top 5 words by count, 4+ chars, excluding 100 stop words). Full LLM-based semantic topic/entity extraction remains deferred (adds cost per post).
+- **Status**: PARTIAL (keyword fallback done in 10.6, full LLM extraction CAN WAIT)
 
 ### MEM-02c: LLM-based summary synthesis
 - **Area**: Memory
@@ -480,16 +457,10 @@
 - **Recommended step**: Memory refinement pass
 - **Status**: DEFERRED
 
-### MEM-02e: Relationship strength accumulation across runs
+### MEM-02e: Relationship strength accumulation across runs ✅ DONE
 - **Area**: Memory
-- **Description**: Currently each run resets `relationship_strength` to a value based on that run's interaction count. Across multiple runs, strength should accumulate (agents who interact in 5 simulations should have stronger relationships than one-run interactions). The upsert overwrites rather than accumulating.
-- **Why deferred**: Single-run relationships work. Accumulation requires reading existing strength before upsert.
-- **Dependencies**: None
-- **Priority**: LOW
-- **Type**: Enhancement
-- **Related files**: `services/memory_service.py` `_update_relationships()`
-- **Recommended step**: Memory refinement pass
-- **Status**: DEFERRED
+- **Description**: Fixed in Step 10.6. Reads existing relationship strength before upsert, adds 0.15 per interaction, capped at 1.0. Multi-run agents accumulate relationship strength.
+- **Status**: DONE (Step 10.6)
 
 ### MEM-02f: N+1 query pattern in memory operations
 - **Area**: Memory / Performance
@@ -501,6 +472,11 @@
 - **Related files**: `services/memory_service.py`, `runtime/config_builder.py`
 - **Recommended step**: Scale optimization pass
 - **Status**: DEFERRED
+
+### MEM-02g: Summary unbounded growth fix ✅ DONE
+- **Area**: Memory
+- **Description**: Fixed in Step 10.6. Summary text capped at 500 chars. More informative format: includes sim count, last activity, behavioral tendency (stance + like/dislike ratio), and top topics.
+- **Status**: DONE (Step 10.6)
 
 ### MEM-03: Belief trajectory over time
 - **Area**: Memory / Analytics
@@ -703,38 +679,20 @@
 
 ## Frontend UI
 
-### FE-01: All workspace pages
+### FE-01: All workspace pages ✅ DONE
 - **Area**: Frontend
-- **Description**: 15 app pages are placeholder stubs (overview, sim/new, sim/[id], simulations, reports, compare, audiences, agents, knowledge, graph, billing, integrations, team, settings). These are the core product UI.
-- **Why deferred**: Step 11. Backend pipeline was prioritized.
-- **Dependencies**: Backend APIs (mostly implemented)
-- **Priority**: HIGH
-- **Type**: Missing feature
-- **Related files**: `frontend/app/(app)/**`
-- **Recommended step**: Step 11
-- **Status**: DEFERRED
+- **Description**: 19 workspace pages fully implemented in `/raktio-dashboard` (Vite + React 19): Overview, Simulations, New Simulation, Canvas, Reports, Report Detail, Compare, Audiences, Agent Atlas, Agent Profile, Knowledge, Graph Explorer, Billing, Integrations, Team, Settings, plus auth pages (Landing, Login, Signup, Onboarding, Pricing).
+- **Status**: DONE (Step 11 Phase 1, 2026-04-15). All pages use mock data — real API integration is Step 11 Phase 2.
 
-### FE-02: All admin pages
+### FE-02: All admin pages ✅ DONE (4 of 11)
 - **Area**: Frontend
-- **Description**: 11 admin pages are placeholder stubs.
-- **Why deferred**: Admin backend not implemented (Step 9).
-- **Dependencies**: ADM-01
-- **Priority**: LOW
-- **Type**: Missing feature
-- **Related files**: `frontend/app/(admin)/**`
-- **Recommended step**: Step 11 (after Step 9)
-- **Status**: BLOCKED
+- **Description**: 4 admin pages implemented: Admin Control, Model & Cost Control, Audit Logs, Tenant Management. 6 remaining admin surfaces (Runtime Health, Population Control, Pricing Control, Plan Management, Failures & Recovery, Storage Oversight) can be added progressively.
+- **Status**: DONE (Step 11 Phase 1). Remaining admin surfaces are not blocking — they can grow with admin needs.
 
-### FE-03: All component files
+### FE-03: All component files ✅ DONE
 - **Area**: Frontend
-- **Description**: ~40 component files are stubs (canvas modes, simulation forms, report sections, agent cards, audience builders, etc.).
-- **Why deferred**: Step 11.
-- **Dependencies**: FE-01
-- **Priority**: HIGH
-- **Type**: Missing feature
-- **Related files**: `frontend/components/**`
-- **Recommended step**: Step 11
-- **Status**: DEFERRED
+- **Description**: Core components implemented: ErrorBoundary, PageStates (Loading/Error/Empty), AppLayout with fixed shell. Canvas modes (Feed/Network/Geo full, Timeline/Segments/Compare placeholder). Report sections (14). Simulation wizard (7 steps). Agent cards, audience builder, knowledge manager, billing cards.
+- **Status**: DONE (Step 11 Phase 1).
 
 ### FE-04: Frontend admin route blocking
 - **Area**: Frontend
@@ -840,35 +798,34 @@ Every deferred item must have a timing classification:
 - **DO BEFORE FRONTEND** — must be done before Step 11 (Frontend)
 - **CAN WAIT** — not needed before launch / production / frontend
 
-### Reality Upgrade Block — remaining (Step 10.5E-H)
-| Step | Item | Timing |
-|------|------|--------|
-| ~~10.5D~~ | ~~Temporal activity multipliers~~ | ~~DONE~~ |
-| 10.5E | Influence-weighted reach (DIST-01) | DO NOW (next) |
-| 10.5F | Source/Knowledge tables + upload (KS-01, KS-02, SRC-01) | DO NOW |
-| 10.5G | Source-aware brief understanding | DO NOW |
-| 10.5H | Platform behavior profiles (PLAT-01, PLAT-02, PLAT-03) | DO NOW |
+### Reality Upgrade Block — Step 10.5 ✅ COMPLETE
+All 10.5 sub-steps (A through H) completed.
 
-### Refinement Batch — Step 10.6 (after 10.5H, before Frontend)
-Post-10.5 refinement pass to harden quality before frontend work.
-| Item | Description | Timing |
+### Refinement Batch — Step 10.6 ✅ COMPLETE
+| Item | Description | Status |
 |------|-------------|--------|
-| RPQ-01 / RP-02c | Report excellence hardening | DO AFTER CURRENT BLOCK |
-| RP-02b | Report section fragility fix | DO AFTER CURRENT BLOCK |
-| MEM-02b | LLM-based topic extraction | DO AFTER CURRENT BLOCK |
-| MEM-02c | LLM-based summary synthesis | DO BEFORE FRONTEND |
-| MEM-02e | Relationship strength accumulation | DO BEFORE FRONTEND |
-| POP-01 | Per-segment stance assignment | DO BEFORE FRONTEND |
-| POP-03 | Agent Atlas API | DO BEFORE FRONTEND |
-| GEO-01 | Geography in evidence/reporting | DO BEFORE FRONTEND |
-| SIM-01 | Fresh vs memory-informed sim mode | DO BEFORE FRONTEND |
-| INF-06 | Stronger influencer agent synthesis | DO BEFORE FRONTEND |
-| DIST-02 | Platform algorithm behavior | DO BEFORE FRONTEND |
-| DIST-04 | Seeded content distribution | DO BEFORE FRONTEND |
+| RP-02b | Report section fragility (truncation + retry) | ✅ DONE |
+| MEM-02b | Topic extraction (keyword fallback) | ✅ DONE (partial — full LLM deferred) |
+| MEM-02e | Relationship strength accumulation | ✅ DONE |
+| MEM-02g | Summary unbounded growth fix | ✅ DONE |
+| POP-03 | Agent Atlas API | ✅ DONE |
+| GEO-01 | Geography in evidence/reporting | ✅ DONE |
+| SIM-01 | Fresh vs memory-informed sim mode | ✅ DONE |
+| POP-01 | Per-segment stance assignment | DEFERRED → CAN WAIT |
+| INF-06 | Stronger influencer agent synthesis | DEFERRED → CAN WAIT |
+| DIST-02 | Platform algorithm behavior | DEFERRED → CAN WAIT |
+| DIST-04 | Seeded content distribution | DEFERRED → CAN WAIT |
+| MEM-02c | LLM-based summary synthesis | DEFERRED → CAN WAIT |
 
 ### Items that CAN WAIT (post-frontend / production)
 | Item | Description |
 |------|-------------|
+| POP-01 | Per-segment stance assignment |
+| INF-06 | Stronger influencer agent synthesis |
+| DIST-02 | Platform algorithm behavior |
+| DIST-04 | Seeded content distribution |
+| MEM-02b (full) | LLM-based topic extraction |
+| MEM-02c | LLM-based summary synthesis |
 | MEM-02d | Episode dedup guard |
 | MEM-02f | N+1 query pattern (scale) |
 | MEM-03 | Belief trajectory over time |
@@ -906,9 +863,149 @@ Post-10.5 refinement pass to harden quality before frontend work.
 | INF-05 | LLM streaming |
 | DM-01 | Simulation events index |
 | DM-02 | Simulation bookmarks |
-| FE-02 | Admin pages |
-| FE-04 | Admin route blocking |
 
+---
+
+## New Items (added 2026-04-15 — Strategic Review)
+
+### Security
+
+### SEC-01: Rate limiting on API endpoints
+- **Area**: Security
+- **Description**: No rate limiter on any API endpoint. DDoS and abuse risk in production.
+- **Priority**: HIGH
+- **Type**: Missing feature
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
+
+### SEC-02: Input sanitization on brief/source text
+- **Area**: Security
+- **Description**: User text from brief and source uploads goes directly into LLM prompts. Prompt injection vector. Should sanitize or sandbox user input before prompt construction.
+- **Priority**: MEDIUM
+- **Type**: Security hardening
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
+
+### SEC-03: API key rotation / secret management
+- **Area**: Security
+- **Description**: All API keys are in env vars with no rotation mechanism. Production needs proper secret management (Vault, AWS Secrets Manager, etc.).
+- **Priority**: MEDIUM
+- **Type**: Infrastructure
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
+
+---
+
+### Observability
+
+### OBS-01: Structured logging
+- **Area**: Observability
+- **Description**: No structured logging (JSON format, request correlation IDs, trace context). Currently print/logger without standardized format. Production debugging requires structured logs.
+- **Priority**: HIGH
+- **Type**: Infrastructure
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
+
+### OBS-02: Error tracking (Sentry or equivalent)
+- **Area**: Observability
+- **Description**: Errors only visible in server console. Production needs Sentry/Datadog/equivalent for error tracking, alerting, and triage.
+- **Priority**: MEDIUM
+- **Type**: Infrastructure
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
+
+---
+
+### Reliability
+
+### REL-01: Simulation timeout / hard kill ✅ DONE
+- **Area**: Reliability
+- **Description**: OASIS runs now wrapped in `asyncio.wait_for()` with configurable timeout: `max(1800, duration_steps * 300)` seconds (min 30 min, 5 min/step). On timeout: marks sim as failed, settles credits with full refund, logs clearly.
+- **Priority**: HIGH
+- **Type**: Bug / missing guard
+- **Status**: DONE (Step 11 pre-integration batch, 2026-04-15)
+
+### REL-02: Idempotent simulation launch
+- **Area**: Reliability
+- **Description**: Double-clicking "Launch" could create duplicate runs. Launch endpoint should check for existing running/bootstrapping runs for the same simulation and reject duplicates.
+- **Priority**: MEDIUM
+- **Type**: Bug / guard
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
+
+---
+
+### Enterprise Readiness
+
+### ENT-01: SSO / SAML integration
+- **Area**: Auth / Enterprise
+- **Description**: Auth is Supabase email+password and Google OAuth only. Enterprise customers require SSO (SAML 2.0, Okta, Azure AD). Supabase supports SAML — needs configuration + UI for enterprise settings.
+- **Priority**: HIGH (for enterprise sales)
+- **Type**: Missing feature
+- **Timing**: DO BEFORE ENTERPRISE LAUNCH
+- **Status**: NEW
+
+### ENT-02: Data export / GDPR compliance
+- **Area**: Governance / Legal
+- **Description**: No API for user data export or deletion. GDPR requires "right to be forgotten" and "data portability". Must support: export all user data, delete user and associated data, audit trail of deletions.
+- **Priority**: MEDIUM
+- **Type**: Legal requirement
+- **Timing**: DO BEFORE EU LAUNCH
+- **Status**: NEW
+
+### ENT-03: Workspace data isolation verification
+- **Area**: Security / Multi-tenancy
+- **Description**: Supabase RLS policies exist but have not been systematically verified for all 28 tables and all cross-workspace query paths. Must audit every repository function for workspace scoping.
+- **Priority**: MEDIUM
+- **Type**: Security audit
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
+
+---
+
+### Frontend Hardening
+
+### FE-05: React error boundary components ✅ DONE
+- **Area**: Frontend
+- **Description**: ErrorBoundary class component wraps `<Outlet />` in AppLayout. Catches rendering errors, shows fallback UI with "Try again" button. Styled with Raktio design system.
+- **Status**: DONE (Step 11 pre-integration batch, 2026-04-15)
+
+### FE-06: Loading/error/empty states for API pages ✅ DONE
+- **Area**: Frontend
+- **Description**: PageLoading, PageError, PageEmpty components created. Loading/error state pattern applied to 6 core pages (Dashboard, SimulationsList, ReportsList, Report, Billing, AgentAtlas). Each page has useState hooks ready for real API replacement.
+- **Status**: DONE (Step 11 pre-integration batch, 2026-04-15)
+
+---
+
+### Performance
+
+### PERF-01: Report generation parallelism
+- **Area**: Performance
+- **Description**: 14 report sections generated sequentially = ~570s. Independent sections (simulation_context, outcome_scorecard, evidence, confidence_limitations) can be generated in parallel. Target: <3 minutes.
+- **Priority**: MEDIUM
+- **Type**: Performance
+- **Timing**: CAN WAIT (post-integration)
+- **Status**: NEW
+
+---
+
+### Infrastructure
+
+### INF-08: Database connection pooling
+- **Area**: Infrastructure
+- **Description**: Supabase client is a singleton with no explicit connection pool management. Under load with concurrent simulations, may hit connection limits.
+- **Priority**: MEDIUM
+- **Type**: Scalability
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
+
+### INF-09: CORS configuration hardening
+- **Area**: Infrastructure
+- **Description**: CORS likely allows all origins in development. Production must restrict to actual frontend domain(s).
+- **Priority**: MEDIUM
+- **Type**: Security
+- **Timing**: DO BEFORE PRODUCTION
+- **Status**: NEW
 ### KS-03: Image source support
 - **Area**: Knowledge
 - **Description**: Source upload supports text/PDF/DOCX but not images. DATAFLOW_AND_RUNTIME.md mentions image upload as a brief ingestion input. Would require vision model (Claude vision) to extract meaning from images.
@@ -930,4 +1027,130 @@ Post-10.5 refinement pass to harden quality before frontend work.
 | SIM-03 | Re-understand/re-plan overwrite without warning | CAN WAIT |
 
 ### DONE items
-MEM-01, MEM-02, BIL-01, BIL-02, BIL-03, BIL-05d, DIST-01, DIST-01b, ADM-01, ADM-02, ADM-03, ADM-04, 10.5D (temporal)
+MEM-01, MEM-02, MEM-02e, MEM-02g, BIL-01, BIL-02, BIL-03, BIL-05d, DIST-01, DIST-01b, ADM-01, ADM-02, ADM-03, ADM-04, POP-03, GEO-01, SIM-01, KS-01, KS-02, PLAT-01, PLAT-02, PLAT-03, RP-02b, FE-01, FE-02 (4/11), FE-03, FE-05, FE-06, REL-01, 10.5D (temporal)
+
+---
+
+## Enterprise Growth Track
+
+> This section documents the strategic direction for evolving Raktio toward enterprise-grade product maturity. These items are NOT yet implemented. They represent the progressive growth path that must be preserved and prioritized as the product matures.
+
+### Governance & Audit Completeness
+- **ADM-06**: Object-level permissions (per-simulation, per-report visibility controls)
+- **ADM-05**: Workspace lifecycle API (create, rename, archive workspaces)
+- **Audit trail completeness**: Ensure all mutation events are captured in audit_logs
+- **Admin/governance parity principle**: Every major product capability must have a corresponding admin/governance surface
+
+### Identity & Access
+- **ENT-01**: SSO / SAML integration (Okta, Azure AD, Google Workspace)
+- **FE-04**: Admin route blocking in frontend (currently relies on backend 403)
+- **Role granularity**: Expand beyond admin/analyst/viewer to include product_admin, billing_admin, support roles
+
+### Data Privacy & Compliance
+- **ENT-02**: GDPR data export / right to be forgotten
+- **ENT-03**: Workspace data isolation verification (RLS audit across all 28 tables)
+- **SEC-02**: Input sanitization on user text before LLM prompts
+
+### Multi-Tenancy & Workspace Control
+- **POP-02**: Private audiences / private populations (workspace-scoped agent pools)
+- **Workspace data isolation**: RLS enforcement verification for all cross-workspace queries
+- **Tenant health monitoring**: Per-tenant resource usage, alert thresholds
+
+### Reporting & Executive Deliverables
+- **RP-03**: Report PDF export (WeasyPrint or Puppeteer)
+- **RP-02**: Report chat (interactive Q&A on evidence)
+- **RP-01**: Report evidence links table (structured drill-down)
+- **Report benchmarking**: Compare results against industry baselines
+- **Report sharing**: Shareable links with access controls
+
+### Commercial & Billing Governance
+- **BIL-07**: Plan change API (upgrade/downgrade/cancel)
+- **BIL-08**: Payment provider integration (Stripe/Paddle)
+- **BIL-04**: Subscriptions table (plan periods, renewals)
+- **BIL-06**: Add-on modular pricing
+
+### Collaboration & Team Features
+- **Collaboration annotations**: Team comments on reports and simulations
+- **Shared views**: Team members can share canvas states and filters
+- **Notification system**: Real alerts beyond the mock notification bell
+
+### Source Governance & Storage
+- **INF-02**: Object storage adapter (Supabase Storage / S3 / R2)
+- **KS-03**: Image source support (vision model extraction)
+- **Source versioning**: Track changes to uploaded documents over time
+- **Storage quotas**: Per-tenant storage limits and monitoring
+
+### Premium Realism Differentiators
+- **DIST-04**: Seeded content injection (test the exact message)
+- **INF-06**: Influencer archetype synthesis (specialized agent types)
+- **DIST-02**: Platform algorithm simulation (engagement-based amplification)
+- **Multi-language simulation**: Agents respond in the geography's language
+- **Custom agent pools**: Enterprise uploads their own customer profiles as templates
+- **Real-time competitive monitoring**: Scheduled sims tracking competitor announcements
+
+### Infrastructure & Reliability
+- **RT-01**: ARQ background worker dispatch (Redis + worker process)
+- **SEC-01**: Rate limiting on API endpoints
+- **INF-08**: Database connection pooling
+- **INF-09**: CORS configuration hardening
+- **OBS-01**: Structured logging (JSON, correlation IDs)
+- **OBS-02**: Error tracking (Sentry or equivalent)
+
+### Principle
+> Admin, governance, and enterprise capabilities must evolve in parallel with product capabilities. Major product features must remain governable, controllable, auditable, and supportable. Before moving to major new implementation blocks, verify completeness, update docs/backlog, and audit the latest implemented block.
+
+---
+
+## Language Architecture (decided 2026-04-15, corrected)
+
+> Core principle: **Store originals with source_language metadata. Generate new content in target language. Preserve originals — never overwrite. Remain compatible with future reader-language translation.**
+>
+> Source language is metadata, not a display constraint. The product must support: source-language display (default), reader-language translation (future), and cached translation (future). Originals are never replaced by translations.
+
+### LANG-01: simulation_language field
+- **Area**: Simulation / Language
+- **Description**: Add `simulation_language` to `simulation_configs`. Derived from geography during `understand_brief()` (primary_languages[0]). User can override in New Simulation wizard. Injected into agent descriptions as "Communicate in {language}." For multi-country sims, per-agent language based on their country.
+- **Priority**: MEDIUM
+- **Type**: New field + config injection
+- **Timing**: DO DURING FRONTEND INTEGRATION (Step 11 Phase 2)
+- **Status**: DESIGNED — not yet implemented
+
+### LANG-02: source_language on memory records
+- **Area**: Memory / Language
+- **Description**: Add explicit `source_language` string field to `agent_memory_summaries` and `agent_episodic_memory`. Set by `memory_service.transform_run_to_memory()` from the simulation's `simulation_language`. This is metadata — it does not constrain display. Future display may show original, translated, or both.
+- **Priority**: MEDIUM
+- **Type**: Schema field + service change
+- **Timing**: DO DURING FRONTEND INTEGRATION (Step 11 Phase 2)
+- **Status**: DESIGNED — not yet implemented
+
+### LANG-03: Report/compare output language parameter
+- **Area**: Reports / Language
+- **Description**: Add `language` parameter to `report_service.generate_report()` and `compare_service.create_comparison()`. Prompt: "Write analysis in {language}. Preserve evidence quotes in their original language." Default: 'en'. Store `language` field on report/compare records. User could later request same report in different language → new version, not overwrite.
+- **Priority**: MEDIUM
+- **Type**: API parameter + prompt change
+- **Timing**: DO DURING FRONTEND INTEGRATION (Step 11 Phase 2)
+- **Status**: DESIGNED — not yet implemented
+
+### LANG-04: reading_language as product concept
+- **Area**: User / Language
+- **Description**: `reading_language` is a real product concept from Phase 1. API endpoints accept `language` parameter for generated content (reports, compare). Per-user `reading_language` preference stored in Phase 2. Default: 'en'. Frontend passes this when calling generation APIs.
+- **Priority**: MEDIUM (concept now, stored preference Phase 2)
+- **Type**: API design + user preference
+- **Timing**: Phase 1 (API param), Phase 2 (stored user preference + UI toggle)
+- **Status**: DESIGNED — API param not yet implemented, user preference not yet implemented
+
+### LANG-05: UI i18n (EN/IT)
+- **Area**: Frontend / Language
+- **Description**: Extract all UI strings into `src/lib/i18n/{en,it}.ts` dictionaries. Add `useLocale()` hook or context provider. `ui_language` user preference controls which dictionary loads. All 23 pages need string extraction.
+- **Priority**: LOW
+- **Type**: Frontend refactor
+- **Timing**: Phase 2
+- **Status**: DESIGNED — not yet implemented
+
+### LANG-06: Translate-on-demand (feed, Atlas, memory)
+- **Area**: Frontend / Language
+- **Description**: In Agent Atlas, Canvas feed, and memory displays, offer optional translate button for content where `source_language ≠ reading_language`. Calls LLM for translation, shows both original and translated text. Results cached (client-side or `translations` table). Originals never overwritten.
+- **Priority**: LOW
+- **Type**: UX enhancement + optional backend cache
+- **Timing**: Phase 3
+- **Status**: DESIGNED — not yet implemented
