@@ -1,0 +1,5 @@
+dist/
+netmax.egg-info/
+__pycache__/
+.idea/
+.venv/

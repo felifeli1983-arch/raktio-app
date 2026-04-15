@@ -1,0 +1,48 @@
+
+### FIGURE
+figure.facecolor: white
+figure.dpi: 100
+figure.titlesize: 16
+figure.titleweight: bold
+
+### LINES
+lines.linewidth: 1.2
+
+### PATCHES
+patch.facecolor: 0072B2
+
+### TICKS
+xtick.direction: out
+ytick.direction: out
+
+### FONTS
+font.size: 16
+font.family: sans-serif
+font.sans-serif: Arial
+
+### AXES
+axes.grid: True
+axes.facecolor: white
+axes.linewidth: 0.1
+axes.titlesize: large
+axes.titleweight: bold
+axes.labelsize: medium
+axes.labelweight: bold
+axes.spines.top: False
+axes.spines.right: False
+axes.spines.left: False
+axes.spines.bottom: False
+axes.titlepad: 25
+axes.labelpad: 20
+
+### GRIDS
+grid.alpha: 0.1
+grid.linewidth: 0.5
+grid.color: 000000
+
+### LEGEND
+legend.framealpha: 0.5
+legend.fancybox: True
+legend.borderpad: 0.5
+legend.loc: best
+legend.fontsize: small

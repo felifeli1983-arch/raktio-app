@@ -147,6 +147,7 @@ def build_run_config(
         "primary_platform": sim_primary_platform,
         "peak_hours_shift": sim_platform_profile.peak_hours_shift,
         "memory_mode": memory_mode,
+        "seed_content": simulation_row.get("seed_content"),
         "created_at": datetime.utcnow().isoformat(),
     }
 

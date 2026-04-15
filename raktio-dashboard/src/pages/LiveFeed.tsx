@@ -673,6 +673,11 @@ export default function SimulationCanvas() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
                             <span className="font-bold text-slate-900 dark:text-slate-100">{post.author}</span>
+                            {(post.author === 'raktio_seed' || post.id === 0) && (
+                              <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800/50 ml-2">
+                                SEED
+                              </span>
+                            )}
                             <span className="text-slate-500 dark:text-slate-400 text-sm">{post.handle}</span>
                             <span className="text-slate-300 dark:text-slate-600">·</span>
                             <span className="text-slate-500 dark:text-slate-400 text-sm">{post.time}</span>

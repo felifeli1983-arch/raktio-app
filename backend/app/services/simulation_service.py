@@ -111,6 +111,7 @@ async def create_simulation(
         "memory_mode": data.memory_mode,
         "simulation_language": data.simulation_language,
         "credit_estimate": credit_est,
+        "seed_content": data.seed_content,
     }
 
     inserted = sim_repo.insert(row)

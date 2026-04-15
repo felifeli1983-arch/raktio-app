@@ -1,0 +1,65 @@
+[tool.black]
+line-length = 88
+target-version = ['py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+# A regex preceded with ^/ will apply only to files and directories
+# in the root of the project.
+^/foo.py  # exclude a file named foo.py in the root of the project (in addition to the defaults)
+'''
+
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel",
+    "cmdstanpy>=1.0.4",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orbit-ml"
+authors = [
+  {name="Edwin Ng"}, 
+  {name="Zhishi Wang"}, 
+  {name="Steve Yang"}, 
+  {name="Yifeng Wu"}, 
+  {name="Jing Pan"},
+]
+maintainers = [
+  {name = "Edwin Ng", email = "edwinnglabs@gmail.com"},
+]
+version = "1.1.5.0"
+description = "Orbit is a package for Bayesian time series modeling and inference."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "arviz",
+  "cmdstanpy>=1.2.1",
+  "importlib_resources",
+  "matplotlib>=3.3.2",
+  "numpy>=1.18",
+  "pandas>=1.0.3",
+  "pyro-ppl>=1.4.0",
+  "scipy>=1.4.1",
+  "seaborn>=0.10.0",
+  "statsmodels>=0.11.1",
+  "torch>=1.11.0",
+  "tqdm>=4.36.1",
+]
+license = {text = "Apache License 2.0"}
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+[project.optional-dependencies]
+dev = [
+  "setuptools>=64",
+  "wheel",
+  "pytest",
+  "black",
+]
+[project.urls]
+Documentation = "https://orbit-ml.readthedocs.io/en/stable/"
+Repository = "https://github.com/uber/orbit"

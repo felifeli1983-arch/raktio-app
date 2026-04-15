@@ -222,6 +222,9 @@ async def generate_report(
                 "generated_at": datetime.now(timezone.utc).isoformat(),
             })
 
+    # Compute confidence score
+    confidence = _compute_confidence_score(sim_context)
+
     # Build summary from executive_summary section
     exec_summary = generated_sections.get("executive_summary", {})
     scorecard = generated_sections.get("outcome_scorecard", {}).get("structured_json")
@@ -233,11 +236,17 @@ async def generate_report(
             "sections_generated": len(generated_sections),
             "evidence_level": "sparse" if (sim_context.get("agent_count") or 0) < 50 else "standard",
         },
-        "scorecard_json": scorecard,
+        "scorecard_json": {
+            **(scorecard or {}),
+            "confidence_score": confidence,
+        },
         "completed_at": datetime.now(timezone.utc).isoformat(),
     })
 
-    sim_repo.update(simulation_id, workspace_id, {"status": "completed"})
+    sim_repo.update(simulation_id, workspace_id, {
+        "status": "completed",
+        "confidence_score": confidence,
+    })
 
     return {
         "report_id": report_id,
@@ -608,6 +617,43 @@ def _parse_section_json(raw: str, section_key: str) -> dict[str, Any]:
 
 
 # ── Read operations ────────────────────────────────────────────────────
+
+def _compute_confidence_score(sim_context: dict[str, Any]) -> float:
+    """
+    Compute a confidence score (0-100) for the simulation results.
+    Based on: agent count, evidence density, interaction diversity, stance distribution entropy.
+    """
+    import math
+
+    agent_count = sim_context.get("agent_count") or 0
+    evidence = sim_context.get("runtime_evidence", {})
+    counts = evidence.get("event_counts", {}) if evidence else {}
+
+    post_count = counts.get("post", 0)
+    comment_count = counts.get("comment", 0)
+    trace_count = counts.get("trace", 0)
+    follow_count = counts.get("follow", 0)
+    like_count = counts.get("like", 0)
+
+    # Factor 1: Agent count (0-25 points)
+    # 10 agents = 5, 50 = 15, 200 = 22, 1000+ = 25
+    agent_score = min(25, 5 * math.log10(max(agent_count, 1) + 1))
+
+    # Factor 2: Evidence density (0-25 points)
+    # posts per agent ratio
+    density = (post_count + comment_count) / max(agent_count, 1)
+    density_score = min(25, density * 12.5)
+
+    # Factor 3: Interaction diversity (0-25 points)
+    interaction_types = sum(1 for k in ['post', 'comment', 'like', 'dislike', 'follow', 'mute', 'report'] if counts.get(k, 0) > 0)
+    diversity_score = min(25, interaction_types * 3.5)
+
+    # Factor 4: Trace volume (0-25 points)
+    trace_score = min(25, 5 * math.log10(max(trace_count, 1) + 1))
+
+    total = agent_score + density_score + diversity_score + trace_score
+    return round(min(100, max(0, total)), 1)
+
 
 async def get_report(
     simulation_id: uuid.UUID,

@@ -44,6 +44,7 @@ class SimulationCreate(BaseModel):
     recsys_choice: RecsysChoice = "random"
     memory_mode: MemoryMode = "persistent"  # "persistent" = use memory, "fresh" = clean slate
     simulation_language: str = "en"  # Language agents use for content (derived from geography, user can override)
+    seed_content: Optional[str] = None  # Exact content to test (injected as seed post)
 
 
 class SimulationUpdate(BaseModel):
@@ -78,8 +79,10 @@ class SimulationResponse(BaseModel):
     recsys_choice: RecsysChoice
     memory_mode: MemoryMode = "persistent"
     simulation_language: str = "en"
+    seed_content: Optional[str] = None
     credit_estimate: Optional[int] = None
     credit_final: Optional[int] = None
+    confidence_score: Optional[float] = None
     audience_id: Optional[uuid.UUID] = None
     parent_simulation_id: Optional[uuid.UUID] = None
     compare_group_id: Optional[uuid.UUID] = None

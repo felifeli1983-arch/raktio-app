@@ -1,0 +1,14 @@
+arviz
+cmdstanpy>=1.2.1
+importlib_resources
+ipywidgets
+matplotlib>=3.3.2
+numpy>=1.26.4
+pandas>=2.3.0
+pyro-ppl>=1.4.0
+scipy>=1.4.1
+seaborn>=0.10.0
+setuptools>=42
+statsmodels>=0.14.4
+torch
+tqdm>=4.36.1

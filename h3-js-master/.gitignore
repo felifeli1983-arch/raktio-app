@@ -1,0 +1,10 @@
+*.log
+*.tmp
+coverage/
+h3c/
+node_modules/
+dist/
+yarn-error.log
+.nyc_output/
+.DS_Store
+cmake/

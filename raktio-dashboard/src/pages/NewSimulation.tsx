@@ -56,6 +56,7 @@ export default function NewSimulation() {
 
   // Step 1: Brief
   const [brief, setBrief] = useState('');
+  const [seedContent, setSeedContent] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
 
   // Step 2: Configuration
@@ -97,6 +98,7 @@ export default function NewSimulation() {
           geography_scope: { countries: [country] },
           recsys_choice: recsys as any,
           memory_mode: memoryMode,
+          seed_content: seedContent || undefined,
           simulation_language: country === 'Italy' ? 'it' : country === 'Japan' ? 'ja' : country === 'Brazil' ? 'pt' : country === 'Spain' ? 'es' : country === 'France' ? 'fr' : country === 'Germany' ? 'de' : 'en',
         });
         simId = created.simulation_id;
@@ -276,6 +278,21 @@ export default function NewSimulation() {
                 value={brief}
                 onChange={(e) => setBrief(e.target.value)}
               />
+
+              <div className="mt-6">
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                  Content to test <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                  Paste the exact post, message, or announcement you want to test. Agents will react to this specific content.
+                </p>
+                <textarea
+                  value={seedContent}
+                  onChange={e => setSeedContent(e.target.value)}
+                  className="w-full h-28 p-4 bg-slate-50/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 text-sm"
+                  placeholder="e.g. We're excited to announce our new Enterprise plan with advanced AI features. The free tier will be sunset on March 1st..."
+                />
+              </div>
 
               <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer">
                 <UploadCloud className="w-8 h-8 mb-3 text-slate-400 dark:text-slate-500" />
@@ -635,6 +652,29 @@ export default function NewSimulation() {
                     </div>
                   </div>
 
+                  {/* Per-Segment Stance Bias */}
+                  {simulation?.brief_context_json?.candidate_audience_segments && (
+                    <div className="mt-4 space-y-3">
+                      <h4 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Per-Segment Stance Bias</h4>
+                      {simulation.brief_context_json.candidate_audience_segments.map((seg: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">{seg.segment}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{Math.round(seg.estimated_share * 100)}% of audience</p>
+                          </div>
+                          <span className={cn(
+                            "text-xs font-bold px-2 py-1 rounded-lg",
+                            seg.estimated_share > 0.35 ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30" :
+                            seg.estimated_share < 0.15 ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30" :
+                            "text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800"
+                          )}>
+                            {seg.estimated_share > 0.35 ? 'Likely opposing' : seg.estimated_share < 0.15 ? 'Likely supportive' : 'Mixed'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {/* Key Topics */}
                   <div>
                     <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -908,6 +948,12 @@ export default function NewSimulation() {
                     <span className="text-slate-500 dark:text-slate-400">Sources</span>
                     <span className="font-bold text-slate-900 dark:text-white">{sources.length} linked</span>
                   </div>
+                  {seedContent && (
+                    <div className="flex justify-between col-span-2">
+                      <span className="text-slate-500 dark:text-slate-400">Seed Content</span>
+                      <span className="font-bold text-slate-900 dark:text-white truncate max-w-xs">{seedContent.slice(0, 60)}{seedContent.length > 60 ? '...' : ''}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

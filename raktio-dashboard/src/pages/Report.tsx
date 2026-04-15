@@ -223,6 +223,19 @@ export default function Report() {
                 )}>
                   {report.status}
                 </span>
+                {scorecard.confidence_score != null && (
+                  <>
+                    <span className="text-slate-300 dark:text-slate-600">|</span>
+                    <span className={cn(
+                      "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border",
+                      scorecard.confidence_score >= 70 ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50" :
+                      scorecard.confidence_score >= 40 ? "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50" :
+                      "bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800/50"
+                    )}>
+                      Confidence: {Math.round(scorecard.confidence_score)}/100
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex gap-3 shrink-0">
@@ -280,7 +293,7 @@ export default function Report() {
 
             {/* Scorecard metrics */}
             {Object.keys(scorecard).length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative z-10 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10 mb-6">
                 {scorecard.risk_score != null && (
                   <ScoreCard label="Risk Score" value={scorecard.risk_score} max={10} color="bg-rose-500" icon={ShieldAlert} />
                 )}
@@ -293,6 +306,7 @@ export default function Report() {
                 {scorecard.adoption_potential != null && (
                   <ScoreCard label="Adoption Potential" value={scorecard.adoption_potential} max={10} color="bg-emerald-500" icon={Target} />
                 )}
+                <ScoreCard label="Confidence" value={scorecard.confidence_score ?? 0} max={100} color="bg-blue-500" icon={ShieldAlert} />
               </div>
             ) : (
               <div className="relative z-10 mb-6 text-sm text-slate-300">

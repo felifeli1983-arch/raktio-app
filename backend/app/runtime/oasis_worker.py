@@ -215,6 +215,32 @@ async def run_oasis_simulation(
     await env.reset()
     logger.info("Agents signed up successfully")
 
+    # ── 6.5. Inject seed content (if provided) ──
+    seed_content = runtime_config.get("seed_content")
+    if seed_content:
+        import sqlite3
+        seed_conn = sqlite3.connect(sqlite_path)
+        seed_cur = seed_conn.cursor()
+        # Insert seed post as if posted by "raktio_seed" brand account
+        seed_cur.execute("""
+            INSERT INTO post (user_id, content, created_at, num_likes, num_dislikes, num_shares)
+            VALUES (0, ?, datetime('now'), 0, 0, 0)
+        """, (seed_content,))
+        seed_post_id = seed_cur.lastrowid
+        # Inject into recommendation table so all agents see it
+        for cfg in agent_configs:
+            agent_idx = cfg["agent_index"]
+            try:
+                seed_cur.execute("""
+                    INSERT OR IGNORE INTO rec (user_id, post_id, created_at)
+                    VALUES (?, ?, datetime('now'))
+                """, (agent_idx, seed_post_id))
+            except Exception:
+                pass
+        seed_conn.commit()
+        seed_conn.close()
+        logger.info(f"Injected seed content (post_id={seed_post_id}) visible to {len(agent_configs)} agents")
+
     # ── 7. Execute step loop ──
     execution_summary = {
         "steps_completed": 0,

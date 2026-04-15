@@ -1,0 +1,8 @@
+networkx==3.3
+numpy
+scipy
+tqdm
+heapdict
+pillow
+pandas
+dash==2.18.0

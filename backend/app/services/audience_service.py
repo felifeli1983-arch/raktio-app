@@ -209,26 +209,24 @@ async def prepare_audience(
                     membership_rows[i:i + chunk_size]
                 )
 
-        # 6. Create simulation_participations
+        # 6. Create simulation_participations with per-segment stance
         if all_agent_ids:
-            # Assign stances based on distribution
-            stances = []
-            for stance, share in stance_dist.items():
-                stances.extend([stance] * max(1, round(len(all_agent_ids) * share)))
-            random.shuffle(stances)
-            stances = stances[:len(all_agent_ids)]
-            while len(stances) < len(all_agent_ids):
-                stances.append("neutral")
+            # Try per-segment stance from planner's candidate_audience_segments
+            segments = brief_context.get("candidate_audience_segments", [])
 
-            participation_rows = [
-                {
+            participation_rows = []
+            for i, aid in enumerate(all_agent_ids):
+                # Look up agent to determine segment
+                agent = agent_repo.find_agent_by_id(uuid.UUID(aid))
+                assigned_stance = _assign_segment_stance(agent, segments, stance_dist)
+
+                participation_rows.append({
                     "simulation_id": str(simulation_id),
                     "agent_id": aid,
-                    "runtime_stance": stances[i],
+                    "runtime_stance": assigned_stance,
                     "active_platforms_json": platforms,
-                }
-                for i, aid in enumerate(all_agent_ids)
-            ]
+                })
+
             for i in range(0, len(participation_rows), chunk_size):
                 agent_repo.insert_participations_batch(
                     participation_rows[i:i + chunk_size]
@@ -256,3 +254,39 @@ async def prepare_audience(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Audience preparation failed: {exc}",
         )
+
+
+def _assign_segment_stance(agent: dict | None, segments: list, default_dist: dict) -> str:
+    """
+    Assign stance based on which segment the agent likely belongs to.
+    Uses profession/age matching heuristics.
+    Falls back to default stance distribution if no segment match.
+    """
+    if not agent or not segments:
+        return _random_stance(default_dist)
+
+    profession = (agent.get("profession") or "").lower()
+    age = agent.get("age") or 30
+
+    for seg in segments:
+        seg_name = (seg.get("segment") or "").lower()
+        # Simple heuristic: match profession keywords to segment names
+        if any(kw in profession for kw in seg_name.split()):
+            # Use segment's estimated_share to bias stance
+            share = seg.get("estimated_share", 0.3)
+            if share > 0.4:
+                # Large segment -> more opposing (they feel the change most)
+                return random.choice(["opposing", "opposing", "neutral", "supportive"])
+            elif share < 0.15:
+                # Small segment -> more supportive (decision makers)
+                return random.choice(["supportive", "supportive", "neutral", "opposing"])
+
+    return _random_stance(default_dist)
+
+
+def _random_stance(dist: dict) -> str:
+    """Pick a random stance from a distribution dict."""
+    stances = []
+    for stance, share in dist.items():
+        stances.extend([stance] * max(1, round(100 * share)))
+    return random.choice(stances) if stances else "neutral"

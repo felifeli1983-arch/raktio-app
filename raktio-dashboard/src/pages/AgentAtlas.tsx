@@ -18,6 +18,7 @@ export default function AgentAtlas() {
   const [showInterview, setShowInterview] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [quickFilter, setQuickFilter] = useState<string>('all');
 
   useEffect(() => {
     setLoading(true);
@@ -47,6 +48,8 @@ export default function AgentAtlas() {
   };
 
   const filteredAgents = agents.filter(a => {
+    // Quick filter
+    if (quickFilter === 'influencers' && a.influence_weight < 3.0) return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -105,6 +108,12 @@ export default function AgentAtlas() {
             <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold rounded-lg whitespace-nowrap cursor-pointer transition-colors">Influential (&gt;80)</span>
             <span className="px-3 py-1.5 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border border-rose-100 dark:border-rose-800/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-xs font-bold rounded-lg whitespace-nowrap cursor-pointer transition-colors">Opposing</span>
             <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold rounded-lg whitespace-nowrap cursor-pointer transition-colors">Analysts (NT)</span>
+            <span
+              className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-xs font-bold rounded-lg whitespace-nowrap cursor-pointer transition-colors"
+              onClick={() => setSearchQuery('influencer')}
+            >
+              Influencers
+            </span>
           </div>
         </div>
 
@@ -134,6 +143,11 @@ export default function AgentAtlas() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <h3 className="font-bold text-slate-900 dark:text-white truncate">{name}</h3>
+                    {agent.influence_weight >= 3.0 && (
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-100 dark:border-amber-800/50 flex items-center gap-1 shrink-0">
+                        <Star className="w-3 h-3" /> Influencer
+                      </span>
+                    )}
                     <span className={cn(
                       "text-[10px] font-bold px-2.5 py-1 rounded-lg border",
                       agent.base_stance_bias === 'supportive' ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-800/50" :
