@@ -207,7 +207,7 @@ export default function SimulationCanvas() {
 
   // Live data from SSE
   const [events, setEvents] = useState<any[]>([]);
-  const [posts, setPosts] = useState(MOCK_POSTS);
+  const [posts, setPosts] = useState<any[]>([]);
   const [beliefShift, setBeliefShift] = useState(0);
   const [unfollowRate, setUnfollowRate] = useState(0);
   const [tick, setTick] = useState(0);
