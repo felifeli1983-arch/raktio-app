@@ -417,11 +417,30 @@ Full historical schema audit completed. Found and fixed 5 mismatches:
 4. Billing balance: now includes plan object from organizations→plans join
 5. Agent stance field: frontend fixed to use `base_stance_bias` (DB column name)
 
-| Tables live | **28 tables, 3 new columns added** |
-| Migrations | 001-011 all applied |
+| Tables live | **28 tables, all columns verified** |
+| Migrations | 001-011 all applied and verified via PostgREST |
+
+**E2E Smoke Test (2026-04-15):**
+Tested against live Supabase DB with real auth:
+- ✓ Auth login (Supabase signInWithPassword) — token obtained
+- ✓ User/org/workspace/membership/credits setup — all persisted
+- ✓ Create simulation — persisted with simulation_language + memory_mode
+- ✓ Understand brief — Claude Sonnet LLM call, brief_context_json populated
+- ✓ Billing balance — 50000 credits, plan: Growth (via org→plans join)
+- ✓ List simulations — workspace-scoped, correct fields including language
+- ✓ Credit estimate — 5 credits for 10 agents / 6h
+- ✓ Agent Atlas — 9 global agents with stance/country
+
+Found and fixed during smoke test:
+- Migration 010 (memory_mode) had never been applied to live DB — applied
+- PostgREST schema cache needed NOTIFY reload after DDL changes
+
+Not tested (requires running OASIS):
+- Plan, prepare-audience, launch, SSE stream, canvas, report generation
+- These require the OASIS runtime + DeepSeek API and take significant real time
 
 **Next steps:**
-- Step 12: Integration Testing (end-to-end simulation → canvas → report flow)
+- Step 12: Full Integration Testing with OASIS runtime (plan → audience → launch → canvas → report)
 
 **Enterprise growth track (preserved for future phases):**
 - ENT-01: SSO / SAML
