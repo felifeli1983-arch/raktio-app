@@ -325,21 +325,17 @@
 - **Description**: Fixed in Step 10.6. Previous sections truncated to single-line summaries (150 chars each) instead of full markdown. Added 1 retry per section with the same prompt. Reduces prompt bloat from ~4000 chars to ~500 for later sections.
 - **Status**: DONE (Step 10.6)
 
-### RP-02c: Report excellence hardening (dedicated post-Billing micro-step)
+### RP-02c: Report excellence hardening ✅ DONE
 - **Area**: Reports
-- **Description**: Comprehensive hardening pass on the report generation system to bring it from "works" to "excellent". Covers five areas:
-  1. **Section fragility**: 3/14 sections failed in stress test. Fix prompt growth by truncating/summarizing previous sections, not including full markdown. Consider section-independence classification (which sections need prior context, which don't).
-  2. **Prompt optimization**: Evidence bundle is passed as raw text. Should be structured more compactly. Reduce redundancy between event_counts, agent_activity, and belief_indicators in the prompt.
-  3. **Generation latency**: 14 sections × sequential LLM call = ~570s. Independent sections (simulation_context, outcome_scorecard, evidence, confidence_limitations) can be generated in parallel. Target: <3 minutes for full report.
-  4. **Evidence grounding quality**: Ensure sections like belief_shifts and faction_analysis cite specific trace events, not just aggregate metrics. Consider passing a curated "evidence highlights" subset per section instead of the full bundle.
-  5. **Robustness**: Add retry logic for failed sections (1 retry with simplified prompt). Track which sections fail most often. Consider fallback to shorter prompts for late sections.
-- **Why deferred**: Core pipeline works and produces useful reports. Excellence hardening is a refinement pass that should happen after the billing system is in place (Step 8), so the product has both simulation capability and commercial infrastructure before polish.
-- **Dependencies**: None (all infrastructure exists)
-- **Priority**: HIGH
-- **Type**: Enhancement / quality hardening
-- **Related files**: `services/report_service.py`, `runtime/event_bridge.py`
-- **Recommended step**: Dedicated micro-step after Step 8 (suggested: Step 8.5 or Step 9A)
-- **Status**: DEFERRED
+- **Description**: Comprehensive hardening pass on the report generation system. Result: 14/14 sections now complete reliably even on small simulations (10 agents).
+- **What was done (2026-04-15)**:
+  1. **Section fragility**: Evidence-level classification (rich/moderate/sparse) adapts prompts. Section-specific fallback prompts for patient_zero, geography, faction.
+  2. **JSON parsing**: 6 fallback strategies — never fails to produce content.
+  3. **Retry**: 3 attempts (was 2), plus graceful fallback with honest "limited evidence" content.
+  4. **System prompt**: Explicitly allows small-sim analysis, forbids hallucination, requires limitation acknowledgment.
+  5. **Scorecard**: scorecard_json now populated on report record.
+- **Remaining for future**: Parallel generation (PERF-01), evidence highlights per section, prompt compaction.
+- **Status**: DONE (robustness). PERF-01 deferred (latency optimization).
 
 ### RP-03: Report PDF export
 - **Area**: Reports

@@ -450,9 +450,18 @@ Fixed during runtime test:
 - AUTH CRITICAL: Supabase ES256 JWT vs backend HS256 — auth guard now tries HS256 first, falls back to Supabase getUser() API for ES256 tokens
 - Migration 010 was never applied to live DB — applied during pre-launch test
 
-Known issues:
-- 2/14 report sections failed (patient_zero, geography_analysis) — likely evidence quality for 10-agent sim
-- memory_mode='fresh' means no memory transformation ran (correct behavior)
+**Report Robustness Hardening (2026-04-15):**
+Before: 10/14 sections on small sim (10 agents), patient_zero + geography_analysis failed
+After: 14/14 sections completed, 0 failures, all with substantial content (3.6–7.3k chars)
+
+Changes:
+- Evidence-level classification (rich/moderate/sparse) adapts prompts to data density
+- Section prompts rewritten for weak-evidence resilience (patient_zero, geography, faction)
+- JSON parsing: 6 fallback strategies (direct → json block → brace match → text-as-markdown → minimal)
+- 3 retry attempts (was 2)
+- Graceful fallback: failed sections get honest "limited evidence" content, never error messages
+- Report always completes 14/14 — scorecard_json now populated
+- System prompt explicitly allows small-sim analysis, forbids hallucination
 
 **Next steps:**
 - Step 12: More comprehensive integration testing with larger agent populations
