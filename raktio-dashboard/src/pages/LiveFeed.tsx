@@ -8,8 +8,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, CircleMarker } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
+import { Map, Source, Layer, Popup, NavigationControl } from 'react-map-gl/maplibre';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import * as d3 from 'd3';
 import { simulationsApi, Simulation } from '../lib/api/simulations';
 import { createEventSource } from '../lib/api/client';
@@ -698,60 +699,89 @@ export default function SimulationCanvas() {
               </div>
             )}
 
-            {/* GEO TAB */}
+            {/* GEO TAB — MapLibre GL (WebGL, GPU-accelerated) */}
             {activeTab === 'Geo' && (
               <div className="absolute inset-0 bg-[#0f172a] overflow-hidden z-0">
-                <MapContainer
-                  center={[30, 0]}
-                  zoom={2}
-                  minZoom={2}
-                  maxBounds={[[-90, -180], [90, 180]]}
-                  maxBoundsViscosity={1.0}
-                  className="w-full h-full"
-                  zoomControl={false}
+                <Map
+                  mapLib={maplibregl}
+                  initialViewState={{ longitude: 10, latitude: 35, zoom: 2.5 }}
+                  style={{ width: '100%', height: '100%' }}
+                  mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
                   attributionControl={false}
+                  minZoom={1.5}
+                  maxZoom={12}
                 >
-                  <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                    noWrap={true}
-                  />
-                  
-                  {/* New York (Supportive) */}
-                  <CircleMarker 
-                    center={[40.7128, -74.0060]} 
-                    radius={12} 
-                    pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 0.6, weight: 2 }}
-                  >
-                    <Popup className="bg-slate-900 dark:bg-slate-800 text-white border-slate-700">
-                      <div className="font-bold text-emerald-400 mb-1">New York</div>
-                      <div className="text-xs">Cluster Supportive: 35%</div>
-                    </Popup>
-                  </CircleMarker>
+                  <NavigationControl position="top-right" showCompass={false} />
 
-                  {/* Milano (Epicentro - Opposing) */}
-                  <CircleMarker 
-                    center={[45.4642, 9.1900]} 
-                    radius={20} 
-                    pathOptions={{ color: '#f43f5e', fillColor: '#f43f5e', fillOpacity: 0.6, weight: 3 }}
+                  {/* Agent cluster points as GeoJSON */}
+                  <Source
+                    id="agent-clusters"
+                    type="geojson"
+                    data={{
+                      type: 'FeatureCollection',
+                      features: [
+                        {
+                          type: 'Feature',
+                          geometry: { type: 'Point', coordinates: [-74.006, 40.7128] },
+                          properties: { name: 'New York', stance: 'supportive', pct: 35, agents: 350, color: '#10b981', radius: 14 },
+                        },
+                        {
+                          type: 'Feature',
+                          geometry: { type: 'Point', coordinates: [9.19, 45.4642] },
+                          properties: { name: 'Milano', stance: 'opposing', pct: 45, agents: 450, color: '#f43f5e', radius: 22, epicenter: true },
+                        },
+                        {
+                          type: 'Feature',
+                          geometry: { type: 'Point', coordinates: [139.6917, 35.6895] },
+                          properties: { name: 'Tokyo', stance: 'neutral', pct: 20, agents: 200, color: '#3b82f6', radius: 10 },
+                        },
+                      ],
+                    }}
                   >
-                    <Popup className="bg-slate-900 dark:bg-slate-800 text-white border-slate-700">
-                      <div className="font-bold text-rose-400 mb-1">Milano (Epicenter)</div>
-                      <div className="text-xs">Cluster Opposing: 45%<br/>Patient Zero detected.</div>
-                    </Popup>
-                  </CircleMarker>
-
-                  {/* Tokyo (Neutral) */}
-                  <CircleMarker 
-                    center={[35.6895, 139.6917]} 
-                    radius={8} 
-                    pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.6, weight: 2 }}
-                  >
-                    <Popup className="bg-slate-900 dark:bg-slate-800 text-white border-slate-700">
-                      <div className="font-bold text-blue-400 mb-1">Tokyo</div>
-                      <div className="text-xs">Cluster Neutral: 20%</div>
-                    </Popup>
-                  </CircleMarker>
-                </MapContainer>
+                    {/* Outer glow ring for epicenter */}
+                    <Layer
+                      id="epicenter-glow"
+                      type="circle"
+                      filter={['==', ['get', 'epicenter'], true]}
+                      paint={{
+                        'circle-radius': 32,
+                        'circle-color': '#f43f5e',
+                        'circle-opacity': 0.15,
+                        'circle-blur': 1,
+                      }}
+                    />
+                    {/* Main cluster circles */}
+                    <Layer
+                      id="cluster-circles"
+                      type="circle"
+                      paint={{
+                        'circle-radius': ['get', 'radius'],
+                        'circle-color': ['get', 'color'],
+                        'circle-opacity': 0.6,
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': ['get', 'color'],
+                        'circle-stroke-opacity': 0.9,
+                      }}
+                    />
+                    {/* Labels */}
+                    <Layer
+                      id="cluster-labels"
+                      type="symbol"
+                      layout={{
+                        'text-field': ['get', 'name'],
+                        'text-size': 11,
+                        'text-offset': [0, 2.2],
+                        'text-anchor': 'top',
+                        'text-font': ['Open Sans Bold'],
+                      }}
+                      paint={{
+                        'text-color': '#e2e8f0',
+                        'text-halo-color': '#0f172a',
+                        'text-halo-width': 1.5,
+                      }}
+                    />
+                  </Source>
+                </Map>
 
                 <div className="absolute bottom-24 left-6 bg-slate-900/90 dark:bg-slate-950/90 border border-slate-700 dark:border-slate-800 p-5 rounded-xl backdrop-blur-md z-[1000] shadow-2xl w-72">
                   <h4 className="text-white text-sm font-bold mb-4 flex items-center gap-2">
