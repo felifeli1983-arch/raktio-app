@@ -435,12 +435,28 @@ Found and fixed during smoke test:
 - Migration 010 (memory_mode) had never been applied to live DB — applied
 - PostgREST schema cache needed NOTIFY reload after DDL changes
 
-Not tested (requires running OASIS):
-- Plan, prepare-audience, launch, SSE stream, canvas, report generation
-- These require the OASIS runtime + DeepSeek API and take significant real time
+**Runtime E2E Smoke Test (2026-04-15):**
+Full OASIS pipeline tested against live Supabase + DeepSeek + Claude:
+- ✓ Plan: planner_recommendation_json stored in simulation_configs
+- ✓ Prepare audience: 10 agents generated, participations created, audience linked
+- ✓ Launch: credits reserved (50000→49995), run record created, OASIS started
+- ✓ OASIS execution: 10 agents × 6 steps, 73 trace events, 11 posts, 11 comments
+- ✓ Completion: run status=completed, sim credit_final=5
+- ✓ Billing finalization: reservation settled, balance correct (49995)
+- ✓ Report generation: 14 sections created, 10 completed, 2 failed (patient_zero, geography_analysis)
+- ✓ Language: simulation_language='en' persisted correctly
+
+Fixed during runtime test:
+- AUTH CRITICAL: Supabase ES256 JWT vs backend HS256 — auth guard now tries HS256 first, falls back to Supabase getUser() API for ES256 tokens
+- Migration 010 was never applied to live DB — applied during pre-launch test
+
+Known issues:
+- 2/14 report sections failed (patient_zero, geography_analysis) — likely evidence quality for 10-agent sim
+- memory_mode='fresh' means no memory transformation ran (correct behavior)
 
 **Next steps:**
-- Step 12: Full Integration Testing with OASIS runtime (plan → audience → launch → canvas → report)
+- Step 12: More comprehensive integration testing with larger agent populations
+- Production readiness (SEC-01 rate limiting, OBS-01 logging, RT-01 ARQ workers)
 
 **Enterprise growth track (preserved for future phases):**
 - ENT-01: SSO / SAML

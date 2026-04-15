@@ -56,35 +56,47 @@ class WorkspaceContext:
 
 def _decode_supabase_jwt(token: str) -> dict:
     """
-    Decode and verify a Supabase-issued JWT.
-    Supabase signs tokens with HS256 using SUPABASE_JWT_SECRET.
-    Found in: Supabase Dashboard → Settings → API → JWT Settings.
+    Validate a Supabase-issued JWT.
+
+    Strategy:
+    1. Try local HS256 decode if SUPABASE_JWT_SECRET is configured
+    2. Fall back to Supabase auth.getUser() API call (works with ES256/RS256)
+
+    Supabase newer projects may use ES256 (asymmetric) instead of HS256.
+    The getUser() fallback handles this transparently.
     """
-    if not settings.supabase_jwt_secret:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Server auth configuration error: JWT secret not configured",
-        )
+    # Strategy 1: Local HS256 decode (fast, no network call)
+    if settings.supabase_jwt_secret:
+        try:
+            payload = jwt.decode(
+                token,
+                settings.supabase_jwt_secret,
+                algorithms=["HS256"],
+                options={"verify_aud": False},
+            )
+            return payload
+        except (ExpiredSignatureError, JWTError):
+            pass  # Fall through to Strategy 2
+
+    # Strategy 2: Verify via Supabase auth.getUser() API
     try:
-        payload = jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            options={"verify_aud": False},  # Supabase JWTs may omit audience
-        )
-        return payload
-    except ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except JWTError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {exc}",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        from app.db.supabase_client import get_supabase
+        sb = get_supabase()
+        user_response = sb.auth.get_user(token)
+        if user_response and user_response.user:
+            return {
+                "sub": str(user_response.user.id),
+                "email": user_response.user.email,
+                "role": "authenticated",
+            }
+    except Exception:
+        pass
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def _extract_auth_user(credentials: HTTPAuthorizationCredentials) -> AuthUser:
