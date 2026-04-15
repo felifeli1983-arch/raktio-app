@@ -30,6 +30,20 @@ export class ApiError extends Error {
   }
 }
 
+/** Safely extract a human-readable error message from any error type */
+export function getErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) return err.detail;
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    const obj = err as Record<string, unknown>;
+    if (typeof obj.message === 'string') return obj.message;
+    if (typeof obj.detail === 'string') return obj.detail;
+    try { return JSON.stringify(err); } catch { /* fall through */ }
+  }
+  return 'An unexpected error occurred';
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -73,7 +87,8 @@ async function request<T>(
     let detail = `Request failed: ${res.status}`;
     try {
       const err = await res.json();
-      detail = err.detail || detail;
+      const raw = err.detail || err.message || err.error || detail;
+      detail = typeof raw === 'string' ? raw : JSON.stringify(raw);
     } catch {}
 
     // Redirect to login on auth failures

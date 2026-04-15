@@ -8,6 +8,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { simulationsApi, Simulation } from '../lib/api/simulations';
+import { getErrorMessage } from '../lib/api/client';
 
 type SimStatus = 'all' | 'running' | 'draft' | 'completed' | 'failed' | 'canceled';
 
@@ -47,7 +48,7 @@ export default function SimulationsList() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message || 'Failed to load simulations');
+        setError(getErrorMessage(err));
         setLoading(false);
       });
   };
@@ -272,7 +273,7 @@ export default function SimulationsList() {
                                     setOpenMenuId(null);
                                     simulationsApi.pause(sim.simulation_id)
                                       .then(() => { showToast('Simulation paused'); loadSimulations(); })
-                                      .catch(err => showToast(err.message || 'Failed to pause simulation'));
+                                      .catch(err => showToast(getErrorMessage(err)));
                                   }} className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2">
                                     <Pause className="w-4 h-4" /> Pause
                                   </button>
@@ -282,7 +283,7 @@ export default function SimulationsList() {
                                     setOpenMenuId(null);
                                     simulationsApi.cancel(sim.simulation_id)
                                       .then(() => { showToast('Simulation canceled'); loadSimulations(); })
-                                      .catch(err => showToast(err.message || 'Failed to cancel simulation'));
+                                      .catch(err => showToast(getErrorMessage(err)));
                                   }} className="w-full text-left px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 flex items-center gap-2">
                                     <X className="w-4 h-4" /> Cancel
                                   </button>
@@ -315,7 +316,7 @@ export default function SimulationsList() {
                                         setSimulations(prev => prev.filter(s => s.simulation_id !== sim.simulation_id));
                                         showToast('Simulation deleted');
                                       })
-                                      .catch(err => showToast(err.message || 'Failed to delete simulation'));
+                                      .catch(err => showToast(getErrorMessage(err)));
                                   }} className="w-full text-left px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 flex items-center gap-2">
                                     <Trash2 className="w-4 h-4" /> Delete
                                   </button>

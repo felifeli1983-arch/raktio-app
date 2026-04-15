@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { agentsApi, Agent, AgentProfile } from '../lib/api/agents';
+import { getErrorMessage } from '../lib/api/client';
 
 export default function AgentAtlas() {
   const [loading, setLoading] = useState(true);
@@ -33,7 +34,7 @@ export default function AgentAtlas() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message || 'Failed to load agents');
+        setError(getErrorMessage(err));
         setLoading(false);
       });
   }, []);
@@ -68,7 +69,7 @@ export default function AgentAtlas() {
     setLoading(true);
     agentsApi.list({ limit: 50 })
       .then(data => { setAgents(data.items); setLoading(false); })
-      .catch(err => { setError(err.message || 'Failed to load agents'); setLoading(false); });
+      .catch(err => { setError(getErrorMessage(err)); setLoading(false); });
   }} />;
 
   return (

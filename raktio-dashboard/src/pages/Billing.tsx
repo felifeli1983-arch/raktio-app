@@ -8,6 +8,7 @@ import {
 import { cn } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { billingApi, Balance, LedgerEntry } from '../lib/api/billing';
+import { getErrorMessage } from '../lib/api/client';
 
 // TODO: Invoices come from the payment provider (Stripe, etc.) — not yet integrated.
 const INVOICES = [
@@ -37,7 +38,7 @@ export default function Billing() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message || 'Failed to load billing data');
+        setError(getErrorMessage(err));
         setLoading(false);
       });
   };

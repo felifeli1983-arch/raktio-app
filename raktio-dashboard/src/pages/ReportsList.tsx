@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { reportsApi, Report } from '../lib/api/reports';
+import { getErrorMessage } from '../lib/api/client';
 
 function deriveRisk(report: Report): 'High' | 'Medium' | 'Low' {
   const score = report.scorecard_json?.risk_score;
@@ -57,7 +58,7 @@ export default function ReportsList() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message || 'Failed to load reports');
+        setError(getErrorMessage(err));
         setLoading(false);
       });
   };

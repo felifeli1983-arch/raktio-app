@@ -9,6 +9,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { reportsApi, Report as ReportType, ReportSection } from '../lib/api/reports';
+import { getErrorMessage } from '../lib/api/client';
 
 /* ── Section icon mapping ── */
 const SECTION_ICONS: Record<string, React.ElementType> = {
@@ -148,7 +149,7 @@ export default function Report() {
         setLoading(false);
       })
       .catch(err => {
-        setError(err.message || 'Failed to load report');
+        setError(getErrorMessage(err));
         setLoading(false);
       });
   };
