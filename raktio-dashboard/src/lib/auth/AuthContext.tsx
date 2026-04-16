@@ -55,15 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     workspaceError: null,
   });
 
-  // Sync token + workspace to API client whenever they change
-  useEffect(() => {
-    if (state.session?.access_token) {
-      setAuthToken(state.session.access_token);
-    } else {
-      setAuthToken('');
-    }
-  }, [state.session?.access_token]);
-
+  // Sync workspace to API client when it changes
   useEffect(() => {
     if (state.currentWorkspace) {
       setWorkspaceId(state.currentWorkspace.workspace_id);
@@ -71,29 +63,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.currentWorkspace]);
 
-  // Restore session on mount
+  // Restore session on mount + listen for changes
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let mounted = true;
+    let workspacesLoaded = false;
+
+    // Handle any session (initial or changed)
+    const handleSession = (session: Session | null, event?: string) => {
+      if (!mounted) return;
       if (session) {
         setState(s => ({ ...s, user: session.user, session, loading: false }));
-        loadWorkspaces(session.access_token);
+        setAuthToken(session.access_token);
+        // Only load workspaces once per mount (avoid duplicate calls)
+        if (!workspacesLoaded) {
+          workspacesLoaded = true;
+          loadWorkspaces(session.access_token);
+        }
       } else {
-        setState(s => ({ ...s, loading: false }));
+        setState(s => ({ ...s, user: null, session: null, loading: false, workspaces: [], currentWorkspace: null }));
       }
+    };
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session, 'INITIAL');
     });
 
-    // Listen for auth state changes — only react to meaningful events
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only react to sign-in, sign-out, and token refresh — not initial session
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setState(s => ({ ...s, user: session?.user ?? null, session, loading: false }));
-        if (session) loadWorkspaces(session.access_token);
+      if (event === 'SIGNED_IN') {
+        workspacesLoaded = false; // Reset so workspaces load for new login
+        handleSession(session, event);
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Just update the token, don't reload workspaces
+        if (mounted && session) {
+          setState(s => ({ ...s, session }));
+          setAuthToken(session.access_token);
+        }
       } else if (event === 'SIGNED_OUT') {
-        setState(s => ({ ...s, user: null, session: null, loading: false, workspaces: [], currentWorkspace: null, workspaceError: null }));
+        handleSession(null, event);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { mounted = false; subscription.unsubscribe(); };
   }, []);
 
   const loadWorkspaces = useCallback(async (token: string) => {
