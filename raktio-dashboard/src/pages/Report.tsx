@@ -180,9 +180,9 @@ export default function Report() {
     );
   }
 
-  const scorecard = report.scorecard_json ?? {};
-  const summary = report.summary_json ?? {};
-  const sections = report.sections ?? [];
+  const scorecard = report?.scorecard_json ?? {};
+  const summary = report?.summary_json ?? {};
+  const sections = Array.isArray(report?.sections) ? report.sections : [];
 
   const reportTitle = summary.topic_summary || `Simulation ${report.simulation_id}`;
 
