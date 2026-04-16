@@ -223,19 +223,23 @@ export default function Report() {
                 )}>
                   {report.status}
                 </span>
-                {scorecard.confidence_score != null && (
-                  <>
-                    <span className="text-slate-300 dark:text-slate-600">|</span>
-                    <span className={cn(
-                      "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border",
-                      scorecard.confidence_score >= 70 ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50" :
-                      scorecard.confidence_score >= 40 ? "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50" :
-                      "bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800/50"
-                    )}>
-                      Confidence: {Math.round(scorecard.confidence_score)}/100
-                    </span>
-                  </>
-                )}
+                {(() => {
+                  const conf = scorecard.confidence_score ?? (scorecard.metrics || {}).confidence_score;
+                  if (conf == null || typeof conf !== 'number') return null;
+                  return (
+                    <>
+                      <span className="text-slate-300 dark:text-slate-600">|</span>
+                      <span className={cn(
+                        "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border",
+                        conf >= 70 ? "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50" :
+                        conf >= 40 ? "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800/50" :
+                        "bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800/50"
+                      )}>
+                        Confidence: {Math.round(conf)}/100
+                      </span>
+                    </>
+                  );
+                })()}
               </div>
             </div>
             <div className="flex gap-3 shrink-0">
@@ -291,24 +295,35 @@ export default function Report() {
               <Zap className="w-5 h-5 text-blue-400" /> Executive Summary
             </h2>
 
-            {/* Scorecard metrics */}
-            {Object.keys(scorecard).length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10 mb-6">
-                {scorecard.risk_score != null && (
-                  <ScoreCard label="Risk Score" value={scorecard.risk_score} max={10} color="bg-rose-500" icon={ShieldAlert} />
-                )}
-                {scorecard.resonance != null && (
-                  <ScoreCard label="Resonance" value={scorecard.resonance} max={10} color="bg-blue-500" icon={TrendingUp} />
-                )}
-                {scorecard.controversy != null && (
-                  <ScoreCard label="Controversy" value={scorecard.controversy} max={10} color="bg-amber-500" icon={Flame} />
-                )}
-                {scorecard.adoption_potential != null && (
-                  <ScoreCard label="Adoption Potential" value={scorecard.adoption_potential} max={10} color="bg-emerald-500" icon={Target} />
-                )}
-                <ScoreCard label="Confidence" value={scorecard.confidence_score ?? 0} max={100} color="bg-blue-500" icon={ShieldAlert} />
-              </div>
-            ) : (
+            {/* Scorecard metrics — handles both flat and nested shapes */}
+            {Object.keys(scorecard).length > 0 ? (() => {
+              // Extract scores from potentially nested structure
+              const m = scorecard.metrics || scorecard;
+              const getScore = (key: string): number | null => {
+                const v = m[key];
+                if (v == null) return null;
+                if (typeof v === 'number') return v;
+                if (typeof v === 'object' && v.score != null) return v.score;
+                if (typeof v === 'object' && v.value != null) return v.value;
+                return null;
+              };
+              const risk = getScore('risk_score');
+              const resonance = getScore('resonance');
+              const controversy = getScore('controversy');
+              const polarization = getScore('polarization');
+              const adoption = getScore('adoption_potential');
+              const confidence = scorecard.confidence_score ?? m.confidence_score ?? null;
+
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 relative z-10 mb-6">
+                  {risk != null && <ScoreCard label="Risk Score" value={risk} max={10} color="bg-rose-500" icon={ShieldAlert} />}
+                  {resonance != null && <ScoreCard label="Resonance" value={resonance} max={10} color="bg-blue-500" icon={TrendingUp} />}
+                  {(controversy ?? polarization) != null && <ScoreCard label={controversy != null ? "Controversy" : "Polarization"} value={(controversy ?? polarization)!} max={10} color="bg-amber-500" icon={Flame} />}
+                  {adoption != null && <ScoreCard label="Adoption" value={adoption} max={10} color="bg-emerald-500" icon={Target} />}
+                  {confidence != null && <ScoreCard label="Confidence" value={confidence} max={100} color="bg-blue-500" icon={ShieldAlert} />}
+                </div>
+              );
+            })() : (
               <div className="relative z-10 mb-6 text-sm text-slate-300">
                 No scorecard data available yet.
               </div>
