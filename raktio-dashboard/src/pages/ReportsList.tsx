@@ -196,7 +196,7 @@ export default function ReportsList() {
                             {reportName(report)}
                           </Link>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
-                            {report.report_id} {report.sections.length > 0 && `\u2022 ${report.sections.length} sections`}
+                            {report.report_id}
                           </div>
                         </div>
                       </div>
