@@ -602,7 +602,48 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 | Auth token refresh causes page flicker/crashes | **BLOCKING** | Auth stabilization needed |
 | No auto-provisioning on signup (org/workspace/credits) | Active | Onboarding flow needed |
 
-## 9. What the Next Chat Should Start With
+## 9. External Codebases in Project Folder
+
+The following codebases were added to the project folder for investigation and potential integration. They are NOT bundled into the app — integration uses npm/pip packages, not these source repos.
+
+### Adopted (installed as packages, actively used)
+
+| Codebase | Package Used | Where | Status |
+|----------|-------------|-------|--------|
+| **maplibre-gl-js** | `maplibre-gl` (npm) | Canvas Geo tab | **ADOPTED** — replaced Leaflet, WebGL GPU-accelerated rendering |
+| **react-map-gl** | `react-map-gl` (npm) | Canvas Geo tab | **ADOPTED** — React wrapper for MapLibre, declarative components |
+
+### Planned for Later Integration
+
+| Codebase | Package | Where | Status | When |
+|----------|---------|-------|--------|------|
+| **networkx** | `networkx` (pip) | Post-run graph analytics | **PLANNED (R1B.2)** — centrality, community detection, faction analysis | After UI stabilization |
+| **supercluster** | Built into MapLibre | Canvas Geo clustering | **PLANNED (GEO-2.3)** — enable via MapLibre `cluster: true` config | When agent counts > 100 |
+| **h3-py** | `h3` (pip) | Backend geo aggregation | **PLANNED (GEO-2.4)** — hex-based spatial aggregation for reports | Enterprise phase |
+| **h3-js** | `h3-js` (npm) | Frontend hex heatmaps | **PLANNED (GEO-2.4)** — hex overlay on MapLibre Geo tab | After h3-py backend |
+| **opentelemetry-python** | `opentelemetry-sdk` (pip) | Backend observability | **PLANNED (OBS-01)** — structured tracing, metrics | Pre-production |
+
+### Reference Only (not for direct integration)
+
+| Codebase | Purpose | How It Helps Raktio | Why Not Direct Integration |
+|----------|---------|--------------------|-----------------------------|
+| **ndlib** | Network diffusion models (SIR, IC, LT) | Reference for cascade math — validates whether observed spread patterns are realistic | OASIS already handles diffusion; NDlib would duplicate the engine |
+| **netmax** | Influence maximization algorithms | Reference for influence probability models — informs influencer archetype design | Raktio generates audiences, doesn't optimize seed selection |
+| **dowhy** | Causal inference (DAGs, do-calculus) | Reference for causal language in reports — "why did sentiment shift" | Too heavy (scipy, econml, sympy); build lightweight causal claims in-house |
+| **causalml** | Uplift / treatment effect modeling | Reference for heterogeneous treatment effects — future calibration | Requires Cython compilation; uplift modeling is a future premium feature |
+| **orbit** | Bayesian time series forecasting | Reference for time-series comparison methods — future calibration loop | Requires CmdStan C++ compiler; overkill for current needs |
+
+### Mapping to Product Areas
+
+| Product Area | Adopted | Planned | Reference |
+|-------------|---------|---------|-----------|
+| **Geo** | maplibre-gl-js, react-map-gl | supercluster, h3-js, h3-py | — |
+| **R1B Graph Analytics** | — | networkx | — |
+| **Realism / Diffusion** | — | — | ndlib, netmax |
+| **Calibration / Causal** | — | — | dowhy, causalml, orbit |
+| **Enterprise / Observability** | — | opentelemetry-python | — |
+
+## 10. What the Next Chat Should Start With
 
 The next implementation session should begin by:
 
