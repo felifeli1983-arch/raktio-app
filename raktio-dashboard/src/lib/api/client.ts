@@ -91,10 +91,8 @@ async function request<T>(
       detail = typeof raw === 'string' ? raw : JSON.stringify(raw);
     } catch {}
 
-    // Redirect to login on auth failures
-    if (res.status === 401) {
-      window.location.hash = '#/login';
-    }
+    // On 401, don't force redirect — let the AuthGuard handle it
+    // This prevents redirect loops when auth state is being resolved
 
     throw new ApiError(res.status, detail);
   }

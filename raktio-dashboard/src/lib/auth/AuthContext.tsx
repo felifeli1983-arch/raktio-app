@@ -82,18 +82,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    // Listen for auth state changes (tab focus, token refresh, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setState(s => ({
-        ...s,
-        user: session?.user ?? null,
-        session,
-        loading: false,
-      }));
-      if (session) {
-        loadWorkspaces(session.access_token);
-      } else {
-        setState(s => ({ ...s, workspaces: [], currentWorkspace: null }));
+    // Listen for auth state changes — only react to meaningful events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only react to sign-in, sign-out, and token refresh — not initial session
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setState(s => ({ ...s, user: session?.user ?? null, session, loading: false }));
+        if (session) loadWorkspaces(session.access_token);
+      } else if (event === 'SIGNED_OUT') {
+        setState(s => ({ ...s, user: null, session: null, loading: false, workspaces: [], currentWorkspace: null, workspaceError: null }));
       }
     });
 
