@@ -1,7 +1,11 @@
 # Deferred Items and Backlog
 
 > Central source of truth for all deferred, partial, blocked, or missing items.
-> Last synchronized: 2026-04-15 (after Step 11 Phase 1 + Strategic Review)
+> Last synchronized: 2026-04-16 (after R1A + Geo Phase 1 + Product Surface Audit)
+>
+> **CURRENT PRIORITY: UI/API/DB stabilization before new features.**
+> 11 frontend surfaces are still MOCK. Auth is fragile. Report rendering needs fixes.
+> See SESSION_HANDOFF.md § "Product Surface Reality Audit" for full status table.
 
 ---
 

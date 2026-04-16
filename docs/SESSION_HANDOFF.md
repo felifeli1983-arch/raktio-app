@@ -1,9 +1,9 @@
 # SESSION HANDOFF
 
-> Last updated: 2026-04-15
-> Last completed step: **Step 11 — Frontend Pages (Phase 1: Structure + Core Pages)**
+> Last updated: 2026-04-16
+> Last completed step: **R1A Realism Upgrade + Geo Phase 1 + Auth + Full API Integration**
 > Repository: https://github.com/felifeli1983-arch/raktio-app.git
-> Git: local `main` ahead of remote by ~15 commits. Feature branches pushed: `feat/steps-4-7-full`, `fix/audit-batch-steps-3-7`
+> Current state: Core loop works E2E. UI/API/DB stabilization needed before next major feature work.
 
 ---
 
@@ -486,7 +486,56 @@ Remaining Geo work (GEO-2, planned):
 
 ---
 
-## Current Priority Order (as of 2026-04-15)
+## Current Priority Order (as of 2026-04-16)
+
+### IMMEDIATE: UI/API/DB Stabilization
+Before any new feature work, the following must be resolved:
+1. Report frontend rendering: scorecard shape mismatch (fix in progress), report names showing UUIDs
+2. Auth stability: token refresh handling, "Invalid or expired token" on page transitions
+3. Overview/Dashboard: still fully mock data (not wired to any API)
+4. Verify all wired pages actually render correctly with real data
+
+### Product Surface Reality Audit (2026-04-16)
+
+| Surface | Status | Endpoints | DB Tables | What's Real | What's Mock/Broken |
+|---------|--------|-----------|-----------|-------------|-------------------|
+| **Simulations List** | **REAL** | GET /api/simulations | simulations | List, status tabs, filters, 3-dot actions (pause/cancel/delete) | — |
+| **New Simulation Wizard** | **REAL** | POST create/understand/plan/prepare-audience/launch, POST estimate | simulations, simulation_configs, agents, audiences, simulation_participations, credit_ledger | Full 7-step flow, seed content field, segment stance bars | Source linking UI is staged (not wired to knowledge API) |
+| **Canvas Feed** | **REAL** | GET /api/simulations/{id}, GET /api/stream/{id} SSE | simulation_runs (SQLite) | Live posts from SSE, pause/resume, terminal status banner | — |
+| **Canvas Network** | **MOCK** | — | — | D3 force graph renders | Uses hardcoded 80-node mock data, not real interaction graph |
+| **Canvas Geo** | **PARTIAL** | — | — | MapLibre GL renders smoothly (WebGL) | Mock marker data (3 hardcoded cities), no real agent locations, no interactivity |
+| **Canvas Timeline** | **PLACEHOLDER** | — | — | Placeholder card with description | No visualization, needs step-by-step event data |
+| **Canvas Segments** | **PLACEHOLDER** | — | — | Placeholder card with description | No visualization, needs segment data |
+| **Canvas Compare** | **PLACEHOLDER** | — | — | Placeholder card with description | No visualization |
+| **Reports List** | **REAL** (fragile) | GET /api/reports | reports | List with status badges, dates | Report names show UUID (simulation_name enrichment in progress), no sections count |
+| **Report Detail** | **REAL** (fragile) | GET /api/reports/{sim_id} | reports, report_sections | 14 sections with markdown, sidebar nav | Scorecard rendering has shape mismatch (fix in progress), confidence badge unstable |
+| **Agent Atlas** | **REAL** | GET /api/agents, GET /api/agents/{id} | agents, agent_memory_summaries, agent_episodic_memory | List, search, profile detail, memory data, influencer badge | Interview modal is mock (RT-02 deferred) |
+| **Audience Studio** | **MOCK** | — | — | Builder UI with filters, agent grid | All data is hardcoded, not wired to API |
+| **Overview/Dashboard** | **MOCK** | — | — | Layout, metric cards, alerts, intelligence summary | All data hardcoded, no API calls |
+| **Compare Lab** | **MOCK** | — | — | Selector UI, delta table, insights | All data hardcoded, not wired to compare API |
+| **Knowledge** | **MOCK** | — | — | Upload zone, source list, vector DB card | All data hardcoded, not wired to knowledge API |
+| **Billing** | **REAL** | GET /api/billing/balance, GET /api/billing/usage | credit_balances, credit_ledger, organizations→plans | Balance, usage log, plan info, topbar pill | Invoices section is mock (needs payment provider) |
+| **Graph Explorer** | **MOCK** | — | — | Search, filters, layout selector, sim selector | Graph area is placeholder, no real graph rendering |
+| **Admin Control** | **MOCK** | — | — | Metrics cards, user table, system status | All data hardcoded |
+| **Admin Costs** | **MOCK** | — | — | LLM spend cards, routing table, alerts | All data hardcoded |
+| **Admin Audit** | **MOCK** | — | — | Filter bar, audit log table | All data hardcoded |
+| **Admin Tenants** | **MOCK** | — | — | Stats, tenant table | All data hardcoded |
+| **Settings** | **MOCK** | — | — | Profile, workspace, notifications, security tabs | All data hardcoded, no API |
+| **Team** | **MOCK** | — | — | Members table, roles, audit tab | All data hardcoded |
+| **Integrations** | **MOCK** | — | — | Integration cards | All data hardcoded |
+| **Login** | **REAL** | Supabase Auth | auth.users | Email/password login, Google OAuth button | Google OAuth not configured in Supabase |
+| **Signup** | **REAL** | Supabase Auth | auth.users | Email/password signup | No auto-provisioning of org/workspace/credits |
+| **Topbar Credit Pill** | **REAL** | GET /api/billing/balance | credit_balances | Live credit count | — |
+| **Auth/Workspace** | **REAL** (fragile) | GET /api/team/workspaces | workspace_memberships, workspaces | Session restore, workspace loading, token propagation | Token refresh causes instability, no workspace switcher UI |
+
+**Summary: 7 REAL, 3 REAL-fragile, 2 PARTIAL, 3 PLACEHOLDER, 11 MOCK**
+
+### Known Fragile Points (must fix before next feature block)
+1. Auth token lifecycle: TOKEN_REFRESHED events, expired token handling, page flicker
+2. Report scorecard shape: nested vs flat metric extraction
+3. Report list names: simulation_name enrichment not yet deployed
+4. Overview dashboard: completely mock, misleading as "operational hub"
+5. No workspace switcher: users with multiple workspaces can't switch
 
 ### NEXT: Realism Upgrade R1A (no external dependencies)
 | Item | Description | Backend | Frontend UI |
@@ -536,17 +585,34 @@ That file contains 33 tracked items across 8 areas with priority, status, depend
 
 ---
 
-## 8. Structural Limitations (Intentional)
+## 8. Structural Limitations
 
-| Limitation | Reason | When to fix |
+| Limitation | Status | When to fix |
 |-----------|--------|-------------|
-| Reports infer belief shifts from behavioral metrics, not NLP sentiment | Requires embedding model calls per post. Batch processing in memory transformation step. | Memory system implementation |
-| `simulation_participations.runtime_stance` set once, never updated | Requires post-run memory transformation | Memory system implementation |
-| Per-segment stance assignment uses global random, ignores per-segment bias | Requires segment-to-agent mapping logic | Audience system refinement |
-| Private audience service logic not enforced | Schema correct, service deferred | Feature step |
-| `stream_adapter.py` not wired (polling used) | Polling adequate for current scale | Production optimization |
-| Agent Atlas API is basic (list+profile) | Full search/filter/compare deferred | POP-03 |
-| LinkedIn/Instagram/TikTok are prompt-level only, not engine-level | OASIS only supports Twitter/Reddit natively | PLAT-04 |
+| Reports infer belief shifts from behavioral metrics, not NLP sentiment | Active | RP-04 deferred |
+| Per-segment stance now uses segment matching (R1A.2) | **FIXED** | Done |
+| Influencer archetypes tagged at audience assembly (R1A.3) | **FIXED** | Done, policy tuned |
+| Seeded content injection (R1A.1) | **FIXED** | Done |
+| Confidence scoring (R1A.4) | **FIXED** | Done |
+| Private audience service logic not enforced | Active | POP-02 deferred |
+| `stream_adapter.py` not wired (polling used) | Active | Production optimization |
+| LinkedIn/Instagram/TikTok are prompt-level only, not engine-level | Active | PLAT-04 deferred |
+| Report generation is sequential (~10 min for 14 sections) | **BLOCKING** | PERF-01 high priority |
+| 11 frontend surfaces are still fully MOCK | **BLOCKING** | UI stabilization needed |
+| Auth token refresh causes page flicker/crashes | **BLOCKING** | Auth stabilization needed |
+| No auto-provisioning on signup (org/workspace/credits) | Active | Onboarding flow needed |
+
+## 9. What the Next Chat Should Start With
+
+The next implementation session should begin by:
+
+1. **Stabilize auth** — fix token refresh, eliminate page flicker, ensure robust session lifecycle
+2. **Stabilize report rendering** — deploy scorecard shape fix, simulation_name enrichment, verify reports render correctly in browser
+3. **Wire Overview dashboard** — it's the landing page and is completely mock; needs real simulation/report counts
+4. **Report performance** — 14 sequential LLM calls × ~45s each = ~10 min per report; PERF-01 (parallelization) is urgent
+5. **Then resume R1B** (platform amplification, graph analytics) and GEO-2 (real geo data)
+
+Do NOT start new feature work until auth + report rendering + overview are stabilized.
 | `runtime_failure_records` separate table not created | Failures visible via admin/runtime from simulation_runs | LOW |
 | Fire-and-forget background task dispatch | asyncio.create_task — no await, needs ARQ for production | RT-01 |
 | Memory topic extraction uses keyword fallback (no NLP) | Hashtag-first, then significant word frequency. Full LLM extraction deferred | MEM-02b |
